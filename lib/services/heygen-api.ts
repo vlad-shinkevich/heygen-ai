@@ -33,12 +33,14 @@ class HeyGenApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
-    // Build headers - only add Content-Type for POST/PUT/PATCH requests
+    // Build headers according to HeyGen API documentation
     const headers: HeadersInit = {
-      "X-Api-Key": this.apiKey,
+      "accept": "application/json",
+      "x-api-key": this.apiKey,
       ...options.headers,
     };
 
+    // Add Content-Type only for POST/PUT/PATCH requests
     const method = options.method || "GET";
     if (method !== "GET" && method !== "HEAD") {
       headers["Content-Type"] = "application/json";
