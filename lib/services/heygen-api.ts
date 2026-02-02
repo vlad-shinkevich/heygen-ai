@@ -305,11 +305,11 @@ class HeyGenApiService {
 
   /**
    * Get remaining quota
-   * https://docs.heygen.com/reference/get-remaining-quota
-   * Endpoint: GET /v1/user.remaining_quota
+   * https://docs.heygen.com/reference/get-remaining-quota-v2
+   * Endpoint: GET /v2/user/remaining_quota
    */
   async getQuota(): Promise<{ remaining: number; used: number }> {
-    const response = await this.request<QuotaResponse>("/v1/user.remaining_quota");
+    const response = await this.request<QuotaResponse>("/v2/user/remaining_quota");
 
     if (response.error) {
       throw new Error(response.error);
