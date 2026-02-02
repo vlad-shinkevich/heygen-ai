@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTelegram, useTelegramHaptic } from "@/lib/hooks/use-telegram";
+import { useAuth } from "@/lib/hooks/use-auth";
 import {
   useAvatars,
   useAvatarGroups,
@@ -27,6 +28,7 @@ import { QuotaDisplay } from "@/components/quota-display";
 
 export default function Home() {
   const { isReady, isTelegram, colorScheme } = useTelegram();
+  const { user } = useAuth();
   const haptic = useTelegramHaptic();
   const { state, dispatch } = useVideoStore();
 
@@ -106,6 +108,11 @@ export default function Home() {
       return;
     }
 
+    if (!user?.id) {
+      haptic.notification("error");
+      return;
+    }
+
     if (state.inputType === "text" && (!state.inputText || !state.selectedVoice)) {
       haptic.notification("error");
       return;
@@ -120,7 +127,9 @@ export default function Home() {
       haptic.impact("medium");
 
       const videoId = await generateVideo({
+        telegramId: user.id,
         avatarId: state.selectedAvatar.avatar_id,
+        avatarName: state.selectedAvatar.avatar_name,
         inputType: state.inputType,
         text: state.inputType === "text" ? state.inputText : undefined,
         voiceId: state.inputType === "text" ? state.selectedVoice?.voice_id : undefined,
@@ -140,6 +149,44 @@ export default function Home() {
       dispatch(videoActions.setError(generateError || "Failed to generate video"));
     }
   };
+
+  // Polling for video status and auto-send
+  useEffect(() => {
+    if (!state.currentVideoId || !user?.id) return;
+
+    const checkAndSend = async () => {
+      try {
+        const response = await fetch(
+          `/api/video/check-and-send?videoId=${state.currentVideoId}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.status === "completed" && data.sent) {
+          // Video was sent to Telegram
+          dispatch(videoActions.updateVideoStatus("completed", data.videoUrl));
+          haptic.notification("success");
+        } else if (data.status) {
+          dispatch(videoActions.updateVideoStatus(data.status, data.videoUrl));
+        }
+      } catch (error) {
+        console.error("Error checking video status:", error);
+      }
+    };
+
+    // Check immediately
+    checkAndSend();
+
+    // Poll every 10 seconds while processing
+    const interval = setInterval(() => {
+      if (state.videoStatus === "pending" || state.videoStatus === "processing") {
+        checkAndSend();
+      } else {
+        clearInterval(interval);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [state.currentVideoId, state.videoStatus, user?.id, dispatch, haptic]);
 
   // Check if generation is possible
   const canGenerate =

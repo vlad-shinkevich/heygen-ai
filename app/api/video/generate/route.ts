@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { heygenApi } from "@/lib/services/heygen-api";
+import { createVideoGeneration } from "@/lib/services/video-history";
 
 interface GenerateVideoRequest {
+  telegramId: number;
   avatarId: string;
+  avatarName?: string;
   inputType: "text" | "audio";
   text?: string;
   voiceId?: string;
@@ -21,6 +24,13 @@ export async function POST(request: Request) {
     const body: GenerateVideoRequest = await request.json();
 
     // Validate required fields
+    if (!body.telegramId) {
+      return NextResponse.json(
+        { success: false, error: "Telegram ID is required" },
+        { status: 400 }
+      );
+    }
+
     if (!body.avatarId) {
       return NextResponse.json(
         { success: false, error: "Avatar ID is required" },
@@ -70,6 +80,26 @@ export async function POST(request: Request) {
         { success: false, error: "Invalid input type. Must be 'text' or 'audio'" },
         { status: 400 }
       );
+    }
+
+    // Save to history
+    try {
+      await createVideoGeneration({
+        telegramId: body.telegramId,
+        videoId: videoId,
+        inputType: body.inputType,
+        avatarId: body.avatarId,
+        avatarName: body.avatarName,
+        voiceId: body.voiceId,
+        inputText: body.text,
+        audioUrl: body.audioUrl,
+        aspectRatio: body.aspectRatio || "16:9",
+        avatarStyle: body.avatarStyle || "normal",
+        testMode: body.test || false,
+      });
+    } catch (historyError) {
+      console.error("Error saving to history:", historyError);
+      // Don't fail the request if history save fails
     }
 
     return NextResponse.json({

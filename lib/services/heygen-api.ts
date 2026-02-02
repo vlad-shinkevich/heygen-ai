@@ -56,6 +56,7 @@ class HeyGenApiService {
 
   /**
    * Get all available avatars
+   * https://docs.heygen.com/reference/list-avatars-v2
    */
   async getAvatars(): Promise<Avatar[]> {
     const response = await this.request<AvatarListResponse>("/v2/avatars");
@@ -67,10 +68,12 @@ class HeyGenApiService {
 
   /**
    * Get all avatar groups
+   * https://docs.heygen.com/reference/list-all-avatar-groups
+   * Endpoint: GET /v2/avatar_group.list
    */
   async getAvatarGroups(): Promise<AvatarGroup[]> {
     const response =
-      await this.request<AvatarGroupsResponse>("/v2/avatar_groups");
+      await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
     if (response.error) {
       throw new Error(response.error);
     }
@@ -94,6 +97,8 @@ class HeyGenApiService {
 
   /**
    * Get all available voices
+   * https://docs.heygen.com/reference/list-voices-v2
+   * Endpoint: GET /v2/voices
    */
   async getVoices(): Promise<Voice[]> {
     const response = await this.request<VoiceListResponse>("/v2/voices");
@@ -119,6 +124,8 @@ class HeyGenApiService {
 
   /**
    * Generate a video with text input
+   * https://docs.heygen.com/reference/create-an-avatar-video-v2
+   * Endpoint: POST /v2/video/generate
    */
   async generateVideoWithText(params: {
     avatarId: string;
@@ -166,6 +173,8 @@ class HeyGenApiService {
 
   /**
    * Generate a video with audio input
+   * https://docs.heygen.com/reference/create-an-avatar-video-v2
+   * Endpoint: POST /v2/video/generate
    */
   async generateVideoWithAudio(params: {
     avatarId: string;
@@ -211,6 +220,8 @@ class HeyGenApiService {
 
   /**
    * Get video generation status
+   * https://docs.heygen.com/reference/video-status
+   * Endpoint: GET /v1/video_status.get?video_id={video_id}
    */
   async getVideoStatus(videoId: string): Promise<VideoStatusResponse["data"]> {
     const response = await this.request<VideoStatusResponse>(
@@ -224,16 +235,39 @@ class HeyGenApiService {
     return response.data;
   }
 
+  /**
+   * List all assets
+   * https://docs.heygen.com/reference/list-assets
+   * Endpoint: GET /v1/asset
+   */
+  async listAssets(): Promise<any[]> {
+    const response = await this.request<{ error: null | string; data: { assets: any[] } }>(
+      "/v1/asset"
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    return response.data.assets;
+  }
+
   // ============ Asset Methods ============
 
   /**
    * Upload an asset (audio file) and get URL
+   * https://docs.heygen.com/reference/upload-asset
+   * Endpoint: POST https://upload.heygen.com/v1/asset
+   * Returns asset URL for use in video generation
    */
   async uploadAsset(file: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(`${this.baseUrl}/v1/asset`, {
+    // Upload endpoint is on different domain
+    const uploadUrl = "https://upload.heygen.com/v1/asset";
+
+    const response = await fetch(uploadUrl, {
       method: "POST",
       headers: {
         "X-Api-Key": this.apiKey,
@@ -253,6 +287,7 @@ class HeyGenApiService {
       throw new Error(data.error);
     }
 
+    // Response format: { data: { url: string } }
     return data.data.url;
   }
 

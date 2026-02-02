@@ -128,7 +128,9 @@ export function useVoices() {
 // ============ Video Generation Hooks ============
 
 interface GenerateVideoParams {
+  telegramId: number;
   avatarId: string;
+  avatarName?: string;
   inputType: "text" | "audio";
   text?: string;
   voiceId?: string;
