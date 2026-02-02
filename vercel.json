@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/video/process-completed",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
