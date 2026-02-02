@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { heygenApi } from "@/lib/services/heygen-api";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const avatars = await heygenApi.getAvatars();
+    const { searchParams } = new URL(request.url);
+    const withDetails = searchParams.get("withDetails") === "true";
+
+    // Use getAvatarsWithDetails if requested, otherwise use regular getAvatars
+    const avatars = withDetails
+      ? await heygenApi.getAvatarsWithDetails()
+      : await heygenApi.getAvatars();
 
     return NextResponse.json({
       success: true,

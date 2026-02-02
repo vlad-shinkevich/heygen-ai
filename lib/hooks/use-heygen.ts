@@ -27,7 +27,8 @@ export function useAvatars() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await fetchApi<Avatar[]>("/api/avatars");
+      // Fetch with details to get preview images
+      const data = await fetchApi<Avatar[]>("/api/avatars?withDetails=true");
       setAvatars(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch avatars");

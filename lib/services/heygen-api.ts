@@ -1,6 +1,8 @@
 import type {
   Avatar,
   AvatarGroup,
+  AvatarDetails,
+  AvatarDetailsResponse,
   AvatarListResponse,
   AvatarGroupsResponse,
   AvatarGroupAvatarsResponse,
@@ -73,6 +75,77 @@ class HeyGenApiService {
       throw new Error(response.error);
     }
     return response.data.avatars;
+  }
+
+  /**
+   * Get avatar details with preview images
+   * https://docs.heygen.com/reference/retrieve-avatar-details
+   * Endpoint: GET /v2/avatar/{avatar_id}/details
+   */
+  async getAvatarDetails(avatarId: string): Promise<AvatarDetails> {
+    const response = await this.request<AvatarDetailsResponse>(
+      `/v2/avatar/${avatarId}/details`
+    );
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    return response.data;
+  }
+
+  /**
+   * Get avatars with details (preview images)
+   * Fetches list and then gets details for avatars missing preview_image_url
+   * Uses batch processing to avoid overwhelming the API
+   */
+  async getAvatarsWithDetails(): Promise<Avatar[]> {
+    const avatars = await this.getAvatars();
+    
+    // Filter avatars that need details
+    const avatarsNeedingDetails = avatars.filter(
+      (avatar) => !avatar.preview_image_url
+    );
+    
+    // If all avatars already have preview, return early
+    if (avatarsNeedingDetails.length === 0) {
+      return avatars;
+    }
+
+    // Process in batches of 10 to avoid rate limiting
+    const batchSize = 10;
+    const batches: Avatar[][] = [];
+    for (let i = 0; i < avatarsNeedingDetails.length; i += batchSize) {
+      batches.push(avatarsNeedingDetails.slice(i, i + batchSize));
+    }
+
+    const detailsMap = new Map<string, AvatarDetails>();
+
+    // Process batches sequentially
+    for (const batch of batches) {
+      const batchResults = await Promise.allSettled(
+        batch.map((avatar) => this.getAvatarDetails(avatar.avatar_id))
+      );
+
+      batchResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          detailsMap.set(batch[index].avatar_id, result.value);
+        }
+      });
+    }
+
+    // Merge details back into avatars
+    return avatars.map((avatar) => {
+      const details = detailsMap.get(avatar.avatar_id);
+      if (details) {
+        return {
+          ...avatar,
+          preview_image_url: details.preview_image_url || avatar.preview_image_url,
+          preview_video_url: details.preview_video_url || avatar.preview_video_url,
+        };
+      }
+      return avatar;
+    });
   }
 
   /**

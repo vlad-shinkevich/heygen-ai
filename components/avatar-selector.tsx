@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import type { Avatar, AvatarGroup } from "@/lib/types/heygen";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,8 @@ interface AvatarSelectorProps {
   error: string | null;
 }
 
+const AVATARS_PER_PAGE = 15;
+
 export function AvatarSelector({
   avatars,
   groups,
@@ -27,11 +29,34 @@ export function AvatarSelector({
   error,
 }: AvatarSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter avatars by search query
-  const filteredAvatars = avatars.filter((avatar) =>
-    avatar.avatar_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAvatars = useMemo(
+    () =>
+      avatars.filter((avatar) =>
+        avatar.avatar_name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [avatars, searchQuery]
   );
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredAvatars.length / AVATARS_PER_PAGE);
+  const startIndex = (currentPage - 1) * AVATARS_PER_PAGE;
+  const endIndex = startIndex + AVATARS_PER_PAGE;
+  const paginatedAvatars = filteredAvatars.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes or filtered results change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filteredAvatars.length]);
+
+  // Reset page if current page is out of bounds
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   if (error) {
     return (
@@ -98,8 +123,9 @@ export function AvatarSelector({
           <p className="text-sm">No avatars found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-          {filteredAvatars.map((avatar) => (
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            {paginatedAvatars.map((avatar) => (
             <button
               key={avatar.avatar_id}
               onClick={() => onAvatarSelect(avatar)}
@@ -164,7 +190,48 @@ export function AvatarSelector({
               )}
             </button>
           ))}
-        </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  currentPage === 1
+                    ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                )}
+              >
+                Previous
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({filteredAvatars.length} total)
+                </span>
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  currentPage === totalPages
+                    ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                )}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Selected Avatar Preview */}

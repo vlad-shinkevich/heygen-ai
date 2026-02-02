@@ -6,9 +6,24 @@ export interface Avatar {
   avatar_id: string;
   avatar_name: string;
   gender: "male" | "female" | "unknown";
-  preview_image_url: string;
+  preview_image_url?: string;
   preview_video_url?: string;
   type: "public" | "private" | "custom";
+}
+
+export interface AvatarDetails {
+  avatar_id: string;
+  avatar_name: string;
+  gender: "male" | "female" | "unknown";
+  preview_image_url?: string;
+  preview_video_url?: string;
+  type: "public" | "private" | "custom";
+  [key: string]: any; // Allow additional fields
+}
+
+export interface AvatarDetailsResponse {
+  error: null | string;
+  data: AvatarDetails;
 }
 
 export interface AvatarGroup {
