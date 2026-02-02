@@ -10,9 +10,14 @@ export function getSupabaseClient(): SupabaseClient {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase environment variables:", {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey,
+      });
       throw new Error("Missing Supabase environment variables");
     }
 
+    console.log("Initializing Supabase client with URL:", supabaseUrl);
     supabase = createClient(supabaseUrl, supabaseKey);
   }
 
@@ -28,6 +33,8 @@ export async function isUserAllowed(telegramId: number): Promise<boolean> {
   try {
     const client = getSupabaseClient();
 
+    console.log("Checking access for telegram_id:", telegramId);
+
     const { data, error } = await client
       .from("allowed_users")
       .select("id, is_active")
@@ -35,13 +42,27 @@ export async function isUserAllowed(telegramId: number): Promise<boolean> {
       .eq("is_active", true)
       .single();
 
-    if (error || !data) {
+    if (error) {
+      console.error("Supabase query error:", error);
+      // If error is "PGRST116" (no rows returned), user is not in list
+      if (error.code === "PGRST116") {
+        console.log("User not found in allowed_users table");
+        return false;
+      }
+      // Other errors might be connection issues
+      console.error("Unexpected error:", error);
       return false;
     }
 
+    if (!data) {
+      console.log("No data returned from query");
+      return false;
+    }
+
+    console.log("User found and is active:", data);
     return true;
-  } catch {
-    console.error("Error checking user access");
+  } catch (err) {
+    console.error("Error checking user access:", err);
     return false;
   }
 }

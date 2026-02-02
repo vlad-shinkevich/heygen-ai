@@ -34,8 +34,16 @@ export async function POST(request: Request) {
 
     const telegramId = data.user.id;
 
+    console.log("Verifying access for user:", {
+      id: telegramId,
+      username: data.user.username,
+      firstName: data.user.first_name,
+    });
+
     // 3. Check if user is in allowed list (Supabase)
     const allowed = await isUserAllowed(telegramId);
+
+    console.log("Access check result:", allowed);
 
     if (!allowed) {
       return NextResponse.json<AuthResponse>(
