@@ -5,19 +5,19 @@ export async function GET() {
   try {
     const groups = await heygenApi.getAvatarGroups();
 
+    // If no groups found, return empty array instead of error
     return NextResponse.json({
       success: true,
-      data: groups,
+      data: groups || [],
     });
   } catch (error) {
     console.error("Error fetching avatar groups:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch avatar groups",
-      },
-      { status: 500 }
-    );
+    // Return empty array instead of error
+    return NextResponse.json({
+      success: true,
+      data: [],
+      note: "Avatar groups endpoint not available",
+    });
   }
 }
 
