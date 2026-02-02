@@ -24,13 +24,21 @@ export function useAuth() {
   const verifyAuth = useCallback(async () => {
     const webApp = getTelegramWebApp();
 
-    // Not in Telegram - allow access for development/testing
+    // Not in Telegram - deny access in production
     if (!webApp) {
+      // Check if we're in development mode (via environment variable)
+      // In production, this will be false, so access will be denied
+      const allowDevAccess = 
+        typeof window !== "undefined" && 
+        window.location.hostname === "localhost";
+      
       setState({
         isLoading: false,
-        isAuthorized: true, // Allow access outside Telegram for development
+        isAuthorized: allowDevAccess, // Only allow on localhost
         user: null,
-        error: null,
+        error: allowDevAccess 
+          ? null 
+          : "Это приложение доступно только через Telegram Mini App. Откройте его через бота в Telegram.",
         isTelegram: false,
       });
       return;

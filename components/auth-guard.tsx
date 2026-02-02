@@ -74,12 +74,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
             )}
           </div>
 
-          {/* Development mode notice */}
+          {/* Not in Telegram notice */}
           {!isTelegram && (
             <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                ⚠️ Приложение открыто вне Telegram. Авторизация пропущена для
-                режима разработки.
+                ⚠️ Это приложение работает только через Telegram Mini App.
+                Откройте его через бота в Telegram.
+              </p>
+            </div>
+          )}
+          
+          {/* Development mode notice */}
+          {!isTelegram && typeof window !== "undefined" && window.location.hostname === "localhost" && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                ℹ️ Режим разработки: доступ разрешён для тестирования на localhost.
               </p>
             </div>
           )}
