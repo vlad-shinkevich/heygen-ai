@@ -14,11 +14,6 @@ export function QuotaDisplay({ quota }: QuotaDisplayProps) {
     );
   }
 
-  // If quota is 0/0, don't show (likely endpoint not available)
-  if (quota.remaining === 0 && quota.used === 0) {
-    return null;
-  }
-
   const total = quota.remaining + quota.used;
   const percentage = total > 0 ? (quota.remaining / total) * 100 : 0;
 

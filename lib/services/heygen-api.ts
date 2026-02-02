@@ -33,13 +33,20 @@ class HeyGenApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    // Build headers - only add Content-Type for POST/PUT/PATCH requests
+    const headers: HeadersInit = {
+      "X-Api-Key": this.apiKey,
+      ...options.headers,
+    };
+
+    const method = options.method || "GET";
+    if (method !== "GET" && method !== "HEAD") {
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        "X-Api-Key": this.apiKey,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -72,38 +79,13 @@ class HeyGenApiService {
    * Endpoint: GET /v2/avatar_group.list
    */
   async getAvatarGroups(): Promise<AvatarGroup[]> {
-    // Try different possible endpoints
-    const endpoints = [
-      "/v2/avatar_group.list",
-      "/v2/avatar_groups",
-      "/v1/avatar_groups",
-      "/v1/avatar_group.list",
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying avatar groups endpoint: ${endpoint}`);
-        const response = await this.request<AvatarGroupsResponse>(endpoint);
-
-        if (response.error) {
-          console.warn(`Endpoint ${endpoint} returned error:`, response.error);
-          continue; // Try next endpoint
-        }
-
-        const groups = response.data?.avatar_groups || [];
-        if (groups.length > 0) {
-          console.log(`Successfully fetched ${groups.length} avatar groups from ${endpoint}`);
-          return groups;
-        }
-      } catch (error) {
-        console.warn(`Endpoint ${endpoint} failed:`, error);
-        continue; // Try next endpoint
-      }
+    const response = await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
+    
+    if (response.error) {
+      throw new Error(response.error);
     }
-
-    // If all endpoints failed, return empty array
-    console.warn("Could not fetch avatar groups from any endpoint");
-    return [];
+    
+    return response.data.avatar_groups || [];
   }
 
   /**
@@ -324,39 +306,17 @@ class HeyGenApiService {
    * https://docs.heygen.com/reference/get-remaining-quota
    * Endpoint: GET /v1/user.remaining_quota
    */
-  async getQuota(): Promise<{ remaining: number; used: number } | null> {
-    try {
-      // Try different possible endpoints
-      const endpoints = [
-        "/v1/user.remaining_quota",
-        "/v1/user/remaining_quota",
-        "/v2/user/remaining_quota",
-      ];
+  async getQuota(): Promise<{ remaining: number; used: number }> {
+    const response = await this.request<QuotaResponse>("/v1/user.remaining_quota");
 
-      for (const endpoint of endpoints) {
-        try {
-          const response = await this.request<QuotaResponse>(endpoint);
-
-          if (response.error) {
-            continue; // Try next endpoint
-          }
-
-          return {
-            remaining: response.data.remaining_quota,
-            used: response.data.used_quota,
-          };
-        } catch {
-          continue; // Try next endpoint
-        }
-      }
-
-      // If all endpoints failed, return null
-      console.warn("Could not fetch quota from any endpoint");
-      return null;
-    } catch (error) {
-      console.error("Error fetching quota:", error);
-      return null;
+    if (response.error) {
+      throw new Error(response.error);
     }
+
+    return {
+      remaining: response.data.remaining_quota,
+      used: response.data.used_quota,
+    };
   }
 }
 
