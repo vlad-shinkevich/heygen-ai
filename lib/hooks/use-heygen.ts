@@ -27,8 +27,8 @@ export function useAvatars() {
     try {
       setIsLoading(true);
       setError(null);
-      // Fetch with details to get preview images
-      const data = await fetchApi<Avatar[]>("/api/avatars?withDetails=true");
+      // API already returns all data including preview_image_url
+      const data = await fetchApi<Avatar[]>("/api/avatars");
       setAvatars(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch avatars");
@@ -54,9 +54,12 @@ export function useAvatarGroups() {
       setIsLoading(true);
       setError(null);
       const data = await fetchApi<AvatarGroup[]>("/api/avatar-groups");
-      setGroups(data);
+      setGroups(data || []); // Ensure it's always an array
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch avatar groups");
+      // If avatar groups endpoint is unavailable, use empty array instead of error
+      // This allows the app to work without group filtering
+      setGroups([]);
+      setError(null); // Don't show error for unavailable groups
     } finally {
       setIsLoading(false);
     }
@@ -282,10 +285,13 @@ export function useQuota() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await fetchApi<{ remaining: number; used: number }>("/api/quota");
+      const data = await fetchApi<{ remaining: number; used: number } | null>("/api/quota");
       setQuota(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch quota");
+      // If quota endpoint is unavailable, set to null instead of error
+      // This allows the app to work without quota display
+      setQuota(null);
+      setError(null); // Don't show error for unavailable quota
     } finally {
       setIsLoading(false);
     }

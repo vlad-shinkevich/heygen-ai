@@ -36,16 +36,38 @@ class HeyGenApiService {
     const url = `${this.baseUrl}${endpoint}`;
 
     // Build headers according to HeyGen API documentation
-    const headers: HeadersInit = {
-      "accept": "application/json",
-      "x-api-key": this.apiKey,
-      ...options.headers,
-    };
+    // Start with required headers, then merge user-provided headers
+    const headers = new Headers();
+    
+    // Set required headers first
+    headers.set("accept", "application/json");
+    headers.set("x-api-key", this.apiKey);
+
+    // Merge user-provided headers (they can override if needed)
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers.set(key, value);
+        });
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+      } else {
+        Object.entries(options.headers).forEach(([key, value]) => {
+          if (value) {
+            headers.set(key, String(value));
+          }
+        });
+      }
+    }
 
     // Add Content-Type only for POST/PUT/PATCH requests
     const method = options.method || "GET";
     if (method !== "GET" && method !== "HEAD") {
-      headers["Content-Type"] = "application/json";
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
     }
 
     const response = await fetch(url, {
@@ -154,13 +176,25 @@ class HeyGenApiService {
    * Endpoint: GET /v2/avatar_group.list
    */
   async getAvatarGroups(): Promise<AvatarGroup[]> {
-    const response = await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
-    
-    if (response.error) {
-      throw new Error(response.error);
+    try {
+      const response = await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
+      
+      if (response.error) {
+        console.warn("Avatar groups endpoint returned error:", response.error);
+        return [];
+      }
+      
+      return response.data.avatar_groups || [];
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If 404, endpoint might not be available for this API key/tier
+      if (errorMessage.includes("404") || errorMessage.includes("NOT FOUND")) {
+        console.warn("Avatar groups endpoint not available (404), returning empty array");
+        return [];
+      }
+      // Re-throw other errors
+      throw error;
     }
-    
-    return response.data.avatar_groups || [];
   }
 
   /**
@@ -381,17 +415,29 @@ class HeyGenApiService {
    * https://docs.heygen.com/reference/get-remaining-quota-v2
    * Endpoint: GET /v2/user/remaining_quota
    */
-  async getQuota(): Promise<{ remaining: number; used: number }> {
-    const response = await this.request<QuotaResponse>("/v2/user/remaining_quota");
+  async getQuota(): Promise<{ remaining: number; used: number } | null> {
+    try {
+      const response = await this.request<QuotaResponse>("/v2/user/remaining_quota");
 
-    if (response.error) {
-      throw new Error(response.error);
+      if (response.error) {
+        console.warn("Quota endpoint returned error:", response.error);
+        return null;
+      }
+
+      return {
+        remaining: response.data.remaining_quota,
+        used: response.data.used_quota,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If 404, endpoint might not be available for this API key/tier
+      if (errorMessage.includes("404") || errorMessage.includes("NOT FOUND")) {
+        console.warn("Quota endpoint not available (404), returning null");
+        return null;
+      }
+      // Re-throw other errors
+      throw error;
     }
-
-    return {
-      remaining: response.data.remaining_quota,
-      used: response.data.used_quota,
-    };
   }
 }
 

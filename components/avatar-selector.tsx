@@ -268,7 +268,7 @@ export function AvatarSelector({
               {selectedAvatar.avatar_name}
             </p>
             <p className="text-xs text-muted-foreground capitalize">
-              {selectedAvatar.gender} • {selectedAvatar.type}
+              {selectedAvatar.gender} • {selectedAvatar.type || "standard"}
             </p>
           </div>
         </div>

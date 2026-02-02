@@ -8,7 +8,10 @@ export interface Avatar {
   gender: "male" | "female" | "unknown";
   preview_image_url?: string;
   preview_video_url?: string;
-  type: "public" | "private" | "custom";
+  premium?: boolean;
+  type: "public" | "private" | "custom" | null;
+  tags?: string[] | null;
+  default_voice_id?: string | null;
 }
 
 export interface AvatarDetails {

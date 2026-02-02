@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { heygenApi } from "@/lib/services/heygen-api";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const withDetails = searchParams.get("withDetails") === "true";
-
-    // Use getAvatarsWithDetails if requested, otherwise use regular getAvatars
-    const avatars = withDetails
-      ? await heygenApi.getAvatarsWithDetails()
-      : await heygenApi.getAvatars();
+    // API already returns all data including preview_image_url
+    const avatars = await heygenApi.getAvatars();
 
     return NextResponse.json({
       success: true,
