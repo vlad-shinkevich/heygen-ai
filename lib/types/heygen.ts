@@ -46,6 +46,7 @@ export interface Voice {
   language: string;
   gender: "male" | "female" | "unknown";
   preview_audio?: string;
+  preview_audio_url?: string; // Alternative field name
   support_pause?: boolean;
   emotion_support?: boolean;
 }

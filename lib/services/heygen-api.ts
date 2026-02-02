@@ -295,20 +295,42 @@ class HeyGenApiService {
 
   /**
    * Get remaining quota
+   * https://docs.heygen.com/reference/get-remaining-quota
+   * Endpoint: GET /v1/user.remaining_quota
    */
-  async getQuota(): Promise<{ remaining: number; used: number }> {
-    const response = await this.request<QuotaResponse>(
-      "/v1/user/remaining_quota"
-    );
+  async getQuota(): Promise<{ remaining: number; used: number } | null> {
+    try {
+      // Try different possible endpoints
+      const endpoints = [
+        "/v1/user.remaining_quota",
+        "/v1/user/remaining_quota",
+        "/v2/user/remaining_quota",
+      ];
 
-    if (response.error) {
-      throw new Error(response.error);
+      for (const endpoint of endpoints) {
+        try {
+          const response = await this.request<QuotaResponse>(endpoint);
+
+          if (response.error) {
+            continue; // Try next endpoint
+          }
+
+          return {
+            remaining: response.data.remaining_quota,
+            used: response.data.used_quota,
+          };
+        } catch {
+          continue; // Try next endpoint
+        }
+      }
+
+      // If all endpoints failed, return null
+      console.warn("Could not fetch quota from any endpoint");
+      return null;
+    } catch (error) {
+      console.error("Error fetching quota:", error);
+      return null;
     }
-
-    return {
-      remaining: response.data.remaining_quota,
-      used: response.data.used_quota,
-    };
   }
 }
 

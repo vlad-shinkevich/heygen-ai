@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Voice } from "@/lib/types/heygen";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,17 @@ export function VoiceSelector({
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+    };
+  }, [audioElement]);
 
   // Get unique languages
   const languages = useMemo(() => {
@@ -46,7 +57,12 @@ export function VoiceSelector({
   const handlePreview = async (voice: Voice, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (!voice.preview_audio) return;
+    // Stop current audio if playing
+    if (audioElement) {
+      audioElement.pause();
+      audioElement.currentTime = 0;
+      setAudioElement(null);
+    }
 
     if (playingVoiceId === voice.voice_id) {
       // Stop current preview
@@ -54,15 +70,42 @@ export function VoiceSelector({
       return;
     }
 
+    // Check if voice has preview audio
+    // Some voices might have preview_audio_url or other field names
+    const previewUrl = voice.preview_audio || voice.preview_audio_url;
+    
+    if (!previewUrl) {
+      return;
+    }
+
     setPlayingVoiceId(voice.voice_id);
 
     try {
-      const audio = new Audio(voice.preview_audio);
-      audio.onended = () => setPlayingVoiceId(null);
-      audio.onerror = () => setPlayingVoiceId(null);
+      const audio = new Audio(previewUrl);
+      
+      audio.onended = () => {
+        setPlayingVoiceId(null);
+        setAudioElement(null);
+      };
+      
+      audio.onerror = () => {
+        setPlayingVoiceId(null);
+        setAudioElement(null);
+      };
+
+      audio.onpause = () => {
+        if (audio.currentTime === 0 || audio.ended) {
+          setPlayingVoiceId(null);
+          setAudioElement(null);
+        }
+      };
+
+      setAudioElement(audio);
       await audio.play();
-    } catch {
+    } catch (error) {
+      console.error("Error playing audio:", error);
       setPlayingVoiceId(null);
+      setAudioElement(null);
     }
   };
 
@@ -163,7 +206,7 @@ export function VoiceSelector({
               </div>
 
               {/* Preview Button */}
-              {voice.preview_audio && (
+              {(voice.preview_audio || voice.preview_audio_url) && (
                 <button
                   onClick={(e) => handlePreview(voice, e)}
                   className={cn(
@@ -172,6 +215,7 @@ export function VoiceSelector({
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary hover:bg-secondary/80"
                   )}
+                  title={playingVoiceId === voice.voice_id ? "Stop preview" : "Play preview"}
                 >
                   {playingVoiceId === voice.voice_id ? (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

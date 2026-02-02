@@ -117,6 +117,19 @@ export function AvatarSelector({
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
+                  unoptimized
+                  onError={(e) => {
+                    // Fallback to placeholder if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector(".avatar-placeholder")) {
+                      const placeholder = document.createElement("div");
+                      placeholder.className = "avatar-placeholder w-full h-full bg-secondary flex items-center justify-center";
+                      placeholder.innerHTML = '<span class="text-2xl">👤</span>';
+                      parent.appendChild(placeholder);
+                    }
+                  }}
                 />
               ) : (
                 <div className="w-full h-full bg-secondary flex items-center justify-center">
@@ -164,6 +177,18 @@ export function AvatarSelector({
                 alt={selectedAvatar.avatar_name}
                 fill
                 className="object-cover"
+                unoptimized
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  const parent = target.parentElement;
+                  if (parent && !parent.querySelector(".avatar-placeholder")) {
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "avatar-placeholder w-full h-full bg-secondary flex items-center justify-center";
+                    placeholder.innerHTML = '<span class="text-lg">👤</span>';
+                    parent.appendChild(placeholder);
+                  }
+                }}
               />
             ) : (
               <div className="w-full h-full bg-secondary flex items-center justify-center">
