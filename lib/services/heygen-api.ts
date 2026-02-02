@@ -34,6 +34,7 @@ class HeyGenApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    console.log("HeyGen API Request:", url);
 
     // Build headers according to HeyGen API documentation
     // Start with required headers, then merge user-provided headers
@@ -42,6 +43,10 @@ class HeyGenApiService {
     // Set required headers first
     headers.set("accept", "application/json");
     headers.set("x-api-key", this.apiKey);
+    console.log("HeyGen API Headers:", {
+      accept: headers.get("accept"),
+      "x-api-key": headers.get("x-api-key") ? "***" : "MISSING"
+    });
 
     // Merge user-provided headers (they can override if needed)
     if (options.headers) {
@@ -76,10 +81,24 @@ class HeyGenApiService {
     });
 
     if (!response.ok) {
-      const error: HeyGenApiError = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      throw new Error(error.error || error.message || "Unknown API error");
+      // For 404, don't try to parse JSON - just return error info
+      if (response.status === 404) {
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        (error as any).status = 404;
+        throw error;
+      }
+      
+      let errorMessage: string;
+      try {
+        const error: HeyGenApiError = await response.json();
+        errorMessage = error.error || error.message || `HTTP ${response.status}: ${response.statusText}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      throw error;
     }
 
     return response.json();
@@ -178,22 +197,13 @@ class HeyGenApiService {
   async getAvatarGroups(): Promise<AvatarGroup[]> {
     try {
       const response = await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
-      
       if (response.error) {
-        console.warn("Avatar groups endpoint returned error:", response.error);
         return [];
       }
-      
-      return response.data.avatar_groups || [];
+      return response.data?.avatar_groups || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      // If 404, endpoint might not be available for this API key/tier
-      if (errorMessage.includes("404") || errorMessage.includes("NOT FOUND")) {
-        console.warn("Avatar groups endpoint not available (404), returning empty array");
-        return [];
-      }
-      // Re-throw other errors
-      throw error;
+      // Any error (404, network, etc.) - return empty array
+      return [];
     }
   }
 
