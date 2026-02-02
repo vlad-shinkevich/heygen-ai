@@ -189,23 +189,6 @@ class HeyGenApiService {
     });
   }
 
-  /**
-   * Get all avatar groups
-   * https://docs.heygen.com/reference/list-all-avatar-groups
-   * Endpoint: GET /v2/avatar_group.list
-   */
-  async getAvatarGroups(): Promise<AvatarGroup[]> {
-    try {
-      const response = await this.request<AvatarGroupsResponse>("/v2/avatar_group.list");
-      if (response.error) {
-        return [];
-      }
-      return response.data?.avatar_groups || [];
-    } catch (error) {
-      // Any error (404, network, etc.) - return empty array
-      return [];
-    }
-  }
 
   /**
    * Get avatars in a specific group
