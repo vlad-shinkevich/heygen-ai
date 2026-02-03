@@ -14,8 +14,8 @@ export function QuotaDisplay({ quota }: QuotaDisplayProps) {
     );
   }
 
-  const total = quota.remaining + quota.used;
-  const percentage = total > 0 ? (quota.remaining / total) * 100 : 0;
+  const totalCredits = 100; // Total credits available
+  const percentage = (quota.remaining / totalCredits) * 100;
 
   return (
     <div className="flex items-center gap-2">
