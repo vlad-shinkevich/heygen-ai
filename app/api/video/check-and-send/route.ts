@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { heygenApi } from "@/lib/services/heygen-api";
 import {
-  getPendingVideosToSend,
+  getUnsentCompletedVideos,
   updateVideoGeneration,
   markVideoAsSent,
   getVideoGenerationByVideoId,
 } from "@/lib/services/video-history";
-import { sendVideoToUser, sendErrorNotification } from "@/lib/services/telegram-bot";
+import { sendVideoToUser, sendErrorMessage } from "@/lib/services/telegram-bot";
 
 /**
  * Check pending videos and send completed ones to Telegram
@@ -14,7 +14,7 @@ import { sendVideoToUser, sendErrorNotification } from "@/lib/services/telegram-
  */
 export async function POST(request: Request) {
   try {
-    const pendingVideos = await getPendingVideosToSend();
+    const pendingVideos = await getUnsentCompletedVideos();
 
     const results = [];
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           }
         } else if (status.status === "failed") {
           // Send error notification
-          await sendErrorNotification(
+          await sendErrorMessage(
             video.telegram_id,
             status.error || "Неизвестная ошибка"
           );

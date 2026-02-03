@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  getPendingVideosToSend,
+  getUnsentCompletedVideos,
   updateVideoGeneration,
   markVideoAsSent,
 } from "@/lib/services/video-history";
 import { heygenApi } from "@/lib/services/heygen-api";
-import { sendVideoToUser, sendErrorNotification } from "@/lib/services/telegram-bot";
+import { sendVideoToUser, sendErrorMessage } from "@/lib/services/telegram-bot";
 
 /**
  * Cron job endpoint to check and send completed videos
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const pendingVideos = await getPendingVideosToSend();
+    const pendingVideos = await getUnsentCompletedVideos();
     const results = [];
 
     for (const video of pendingVideos) {
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
           }
         } else if (status.status === "failed") {
           // Send error notification
-          await sendErrorNotification(
+          await sendErrorMessage(
             video.telegram_id,
             status.error || "Неизвестная ошибка"
           );
