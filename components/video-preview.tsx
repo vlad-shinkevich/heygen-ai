@@ -19,7 +19,6 @@ const statusConfig: Record<
   processing: { label: "Processing", color: "text-blue-500", icon: "⚙️" },
   completed: { label: "Completed", color: "text-green-500", icon: "✅" },
   failed: { label: "Failed", color: "text-red-500", icon: "❌" },
-  draft: { label: "Draft", color: "text-gray-500", icon: "📝" },
 };
 
 export function VideoPreview({
