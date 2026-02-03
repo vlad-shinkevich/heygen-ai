@@ -44,7 +44,7 @@ export function VoiceSelector({
   // Filter voices
   const filteredVoices = useMemo(() => {
     return voices.filter((voice) => {
-      const matchesSearch = voice.name
+      const matchesSearch = !searchQuery || (voice.name || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const matchesLanguage = !selectedLanguage || voice.language === selectedLanguage;
@@ -199,7 +199,7 @@ export function VoiceSelector({
 
               {/* Voice Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{voice.name}</p>
+                <p className="font-medium text-sm truncate">{voice.name || voice.voice_id}</p>
                 <p className="text-xs text-muted-foreground">
                   {voice.language} • {voice.gender}
                 </p>
@@ -269,7 +269,7 @@ export function VoiceSelector({
             {selectedVoice.gender === "male" ? "👨" : selectedVoice.gender === "female" ? "👩" : "🎤"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{selectedVoice.name}</p>
+            <p className="font-medium text-sm truncate">{selectedVoice.name || selectedVoice.voice_id}</p>
             <p className="text-xs text-muted-foreground">
               {selectedVoice.language} • {selectedVoice.gender}
             </p>
