@@ -35,6 +35,16 @@ export function VoiceSelector({
     };
   }, [audioElement]);
 
+  // Helper to get preview URL from voice
+  const getPreviewUrl = (voice: Voice): string | undefined => {
+    return voice.preview_audio || 
+           voice.preview_audio_url || 
+           voice.preview_url ||
+           voice.audio_url ||
+           voice.sample_url ||
+           (voice as any).preview;
+  };
+
   // Get unique languages
   const languages = useMemo(() => {
     const langs = [...new Set(voices.map((v) => v.language))];
@@ -57,22 +67,26 @@ export function VoiceSelector({
   const handlePreview = async (voice: Voice, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Stop current audio if playing
+    // If clicking on the same voice that's playing, stop it
+    if (playingVoiceId === voice.voice_id) {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        setAudioElement(null);
+      }
+      setPlayingVoiceId(null);
+      return;
+    }
+
+    // Stop current audio if playing a different voice
     if (audioElement) {
       audioElement.pause();
       audioElement.currentTime = 0;
       setAudioElement(null);
     }
 
-    if (playingVoiceId === voice.voice_id) {
-      // Stop current preview
-      setPlayingVoiceId(null);
-      return;
-    }
-
     // Check if voice has preview audio
-    // Some voices might have preview_audio_url or other field names
-    const previewUrl = voice.preview_audio || voice.preview_audio_url;
+    const previewUrl = getPreviewUrl(voice);
     
     if (!previewUrl) {
       return;
@@ -206,29 +220,29 @@ export function VoiceSelector({
               </div>
 
               {/* Preview Button */}
-              {(voice.preview_audio || voice.preview_audio_url) && (
-                <button
-                  onClick={(e) => handlePreview(voice, e)}
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                    playingVoiceId === voice.voice_id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary hover:bg-secondary/80"
-                  )}
-                  title={playingVoiceId === voice.voice_id ? "Stop preview" : "Play preview"}
-                >
-                  {playingVoiceId === voice.voice_id ? (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <rect x="6" y="4" width="4" height="16" />
-                      <rect x="14" y="4" width="4" height="16" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={(e) => handlePreview(voice, e)}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                  playingVoiceId === voice.voice_id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary hover:bg-secondary/80",
+                  !getPreviewUrl(voice) && "opacity-50 cursor-not-allowed"
+                )}
+                title={playingVoiceId === voice.voice_id ? "Stop preview" : "Play preview"}
+                disabled={!getPreviewUrl(voice)}
+              >
+                {playingVoiceId === voice.voice_id ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
 
               {/* Selection indicator */}
               {selectedVoice?.voice_id === voice.voice_id && (

@@ -407,6 +407,8 @@ class HeyGenApiService {
    * Get remaining quota
    * https://docs.heygen.com/reference/get-remaining-quota-v2
    * Endpoint: GET /v2/user/remaining_quota
+   * 
+   * Converts quota to credits by dividing by 60 (as per HeyGen API documentation)
    */
   async getQuota(): Promise<{ remaining: number; used: number } | null> {
     try {
@@ -417,9 +419,11 @@ class HeyGenApiService {
         return null;
       }
 
+      // Convert quota to credits: divide by 60
+      // https://docs.heygen.com/reference/get-remaining-quota-v2
       return {
-        remaining: response.data.remaining_quota,
-        used: response.data.used_quota,
+        remaining: Math.floor(response.data.remaining_quota / 60),
+        used: Math.floor(response.data.used_quota / 60),
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
