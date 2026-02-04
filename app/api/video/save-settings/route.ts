@@ -36,15 +36,14 @@ export async function POST(request: Request) {
     // Save settings to Supabase
     const supabase = getSupabaseClient();
 
-    // Prepare data for upsert
+    // Prepare data - always use provided values, use defaults only if undefined
     const settingsData: any = {
       telegram_id: body.telegramId,
       avatar_id: body.avatarId,
       avatar_name: body.avatarName || null,
       voice_id: body.voiceId,
-      aspect_ratio: body.aspectRatio || "16:9",
-      avatar_style: body.avatarStyle || "normal",
-      updated_at: new Date().toISOString(),
+      aspect_ratio: body.aspectRatio !== undefined ? body.aspectRatio : "16:9",
+      avatar_style: body.avatarStyle !== undefined ? body.avatarStyle : "normal",
     };
 
     // Background is JSONB, pass object directly (Supabase will handle it)
@@ -54,11 +53,64 @@ export async function POST(request: Request) {
       settingsData.background = null;
     }
 
-    const { error } = await supabase
+    console.log("Saving settings:", {
+      telegram_id: settingsData.telegram_id,
+      avatar_id: settingsData.avatar_id,
+      avatar_name: settingsData.avatar_name,
+      voice_id: settingsData.voice_id,
+      aspect_ratio: settingsData.aspect_ratio,
+      avatar_style: settingsData.avatar_style,
+      background: settingsData.background,
+    });
+
+    // Check if settings exist for this user
+    const { data: existingSettings } = await supabase
       .from("user_settings")
-      .upsert(settingsData, {
-        onConflict: "telegram_id",
-      });
+      .select("telegram_id")
+      .eq("telegram_id", body.telegramId)
+      .single();
+
+    let error;
+    let data;
+
+    if (existingSettings) {
+      // Update existing record - explicitly update all fields
+      const { error: updateError, data: updateData } = await supabase
+        .from("user_settings")
+        .update({
+          avatar_id: settingsData.avatar_id,
+          avatar_name: settingsData.avatar_name,
+          voice_id: settingsData.voice_id,
+          aspect_ratio: settingsData.aspect_ratio,
+          avatar_style: settingsData.avatar_style,
+          background: settingsData.background,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("telegram_id", body.telegramId)
+        .select();
+      
+      error = updateError;
+      data = updateData;
+    } else {
+      // Insert new record
+      const { error: insertError, data: insertData } = await supabase
+        .from("user_settings")
+        .insert({
+          ...settingsData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select();
+      
+      error = insertError;
+      data = insertData;
+    }
+
+    if (error) {
+      console.error("Supabase upsert error:", error);
+    } else {
+      console.log("Settings saved successfully:", data);
+    }
 
     if (error) {
       console.error("Error saving settings to Supabase:", error);

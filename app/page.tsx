@@ -82,19 +82,24 @@ export default function Home() {
       setIsGenerating(true);
       haptic.impact("medium");
 
+      // Prepare settings data
+      const settingsData = {
+        telegramId: user.id,
+        avatarId: state.selectedAvatar.avatar_id,
+        avatarName: state.selectedAvatar.avatar_name,
+        voiceId: state.selectedVoice.voice_id,
+        aspectRatio: state.aspectRatio,
+        avatarStyle: state.avatarStyle,
+        background: state.background,
+      };
+
+      console.log("Sending settings to API:", settingsData);
+
       // Save settings to Supabase database
       const response = await fetch("/api/video/save-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telegramId: user.id,
-          avatarId: state.selectedAvatar.avatar_id,
-          avatarName: state.selectedAvatar.avatar_name,
-          voiceId: state.selectedVoice.voice_id,
-          aspectRatio: state.aspectRatio,
-          avatarStyle: state.avatarStyle,
-          background: state.background,
-        }),
+        body: JSON.stringify(settingsData),
       });
 
       const result = await response.json();
