@@ -9,7 +9,6 @@ import {
   useAvatarsInGroup,
   useVoices,
   useVideoGeneration,
-  useVideoStatus,
   useAudioUpload,
   useQuota,
 } from "@/lib/hooks/use-heygen";
@@ -22,7 +21,6 @@ import { VoiceSelector } from "@/components/voice-selector";
 import { TextInput } from "@/components/text-input";
 import { AudioUpload } from "@/components/audio-upload";
 import { VideoSettings } from "@/components/video-settings";
-import { VideoPreview } from "@/components/video-preview";
 import { GenerateButton } from "@/components/generate-button";
 import { QuotaDisplay } from "@/components/quota-display";
 
@@ -42,14 +40,6 @@ export default function Home() {
   const { quota, refetch: refetchQuota } = useQuota();
   const { generateVideo, isGenerating, error: generateError } = useVideoGeneration();
   const { uploadAudio, isUploading, audioUrl: uploadedAudioUrl } = useAudioUpload();
-  const { status, videoUrl, thumbnailUrl } = useVideoStatus(state.currentVideoId);
-
-  // Update video status in store
-  useEffect(() => {
-    if (status) {
-      dispatch(videoActions.updateVideoStatus(status, videoUrl || undefined, thumbnailUrl || undefined));
-    }
-  }, [status, videoUrl, thumbnailUrl, dispatch]);
 
   // Combine all avatars (either from selected group or all avatars)
   const displayAvatars = state.selectedGroupId ? groupAvatars : avatars;
@@ -126,7 +116,7 @@ export default function Home() {
     try {
       haptic.impact("medium");
 
-      const videoId = await generateVideo({
+      await generateVideo({
         telegramId: user.id,
         avatarId: state.selectedAvatar.avatar_id,
         avatarName: state.selectedAvatar.avatar_name,
@@ -140,53 +130,15 @@ export default function Home() {
         test: state.testMode,
       });
 
-      dispatch(videoActions.startGeneration(videoId));
-      dispatch(videoActions.addToHistory(videoId, state.selectedAvatar.avatar_name));
+      // Generation request sent successfully to Telegram bot
+      // n8n will process it and send video when ready
       haptic.notification("success");
-      refetchQuota();
+      dispatch(videoActions.resetGeneration());
     } catch {
       haptic.notification("error");
-      dispatch(videoActions.setError(generateError || "Failed to generate video"));
+      dispatch(videoActions.setError(generateError || "Failed to send generation request"));
     }
   };
-
-  // Polling for video status and auto-send
-  useEffect(() => {
-    if (!state.currentVideoId || !user?.id) return;
-
-    const checkAndSend = async () => {
-      try {
-        const response = await fetch(
-          `/api/video/check-and-send?videoId=${state.currentVideoId}`
-        );
-        const data = await response.json();
-
-        if (data.success && data.status === "completed" && data.sent) {
-          // Video was sent to Telegram
-          dispatch(videoActions.updateVideoStatus("completed", data.videoUrl));
-          haptic.notification("success");
-        } else if (data.status) {
-          dispatch(videoActions.updateVideoStatus(data.status, data.videoUrl));
-        }
-      } catch (error) {
-        console.error("Error checking video status:", error);
-      }
-    };
-
-    // Check immediately
-    checkAndSend();
-
-    // Poll every 10 seconds while processing
-    const interval = setInterval(() => {
-      if (state.videoStatus === "pending" || state.videoStatus === "processing") {
-        checkAndSend();
-      } else {
-        clearInterval(interval);
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [state.currentVideoId, state.videoStatus, user?.id, dispatch, haptic]);
 
   // Check if generation is possible
   const canGenerate =
@@ -314,20 +266,6 @@ export default function Home() {
           />
         </section>
 
-        {/* Video Preview */}
-        {(state.currentVideoId || state.videoUrl) && (
-          <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-3">
-              Video Result
-            </h2>
-            <VideoPreview
-              status={state.videoStatus}
-              videoUrl={state.videoUrl}
-              thumbnailUrl={state.thumbnailUrl}
-              error={state.generationError}
-            />
-          </section>
-        )}
 
         {/* Error Display */}
         {(avatarsError || voicesError || generateError || state.generationError) && (

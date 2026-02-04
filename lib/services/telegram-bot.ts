@@ -146,3 +146,81 @@ export async function sendVideoWithKeyboard(
     return false;
   }
 }
+
+/**
+ * Send generation request to Telegram bot
+ * User sees friendly message, n8n can parse JSON data from message
+ */
+export async function sendGenerationRequest(
+  chatId: number,
+  data: {
+    avatarId: string;
+    avatarName?: string;
+    voiceId?: string;
+    text?: string;
+    audioUrl?: string;
+    inputType: "text" | "audio";
+    avatarStyle?: "normal" | "circle" | "closeUp";
+    aspectRatio?: "16:9" | "9:16" | "1:1";
+    background?: {
+      type: "color" | "image" | "video";
+      value: string;
+    };
+    test?: boolean;
+  }
+): Promise<boolean> {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error("TELEGRAM_BOT_TOKEN is not set");
+    return false;
+  }
+
+  try {
+    const url = `${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+    // User-friendly message
+    const userMessage = "Генерация отправлена ✅";
+    
+    // JSON data for n8n to parse
+    // n8n can extract JSON from message.text by parsing lines after the message
+    const jsonData = JSON.stringify({
+      type: "video_generation",
+      avatarId: data.avatarId,
+      avatarName: data.avatarName,
+      voiceId: data.voiceId,
+      text: data.text,
+      audioUrl: data.audioUrl,
+      inputType: data.inputType,
+      avatarStyle: data.avatarStyle || "normal",
+      aspectRatio: data.aspectRatio || "16:9",
+      background: data.background,
+      test: data.test || false,
+    });
+
+    // Combine message with JSON data
+    // Format: "User message\n\nJSON_DATA"
+    // n8n can parse by extracting JSON from the end of the message
+    const fullMessage = `${userMessage}\n\n${jsonData}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: fullMessage,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      console.error("Telegram API error:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending generation request to Telegram:", error);
+    return false;
+  }
+}

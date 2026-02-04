@@ -151,24 +151,22 @@ interface GenerateVideoParams {
 export function useVideoGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [videoId, setVideoId] = useState<string | null>(null);
 
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
     try {
       setIsGenerating(true);
       setError(null);
-      setVideoId(null);
 
-      const data = await fetchApi<{ videoId: string }>("/api/video/generate", {
+      await fetchApi<{ message: string }>("/api/video/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
 
-      setVideoId(data.videoId);
-      return data.videoId;
+      // Generation request sent to Telegram bot (n8n will process it)
+      return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to generate video";
+      const errorMessage = err instanceof Error ? err.message : "Failed to send generation request";
       setError(errorMessage);
       throw err;
     } finally {
@@ -176,7 +174,7 @@ export function useVideoGeneration() {
     }
   }, []);
 
-  return { generateVideo, isGenerating, error, videoId };
+  return { generateVideo, isGenerating, error };
 }
 
 export function useVideoStatus(videoId: string | null) {

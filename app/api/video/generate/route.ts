@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { heygenApi } from "@/lib/services/heygen-api";
-import { createVideoGeneration } from "@/lib/services/video-history";
+import { sendGenerationRequest } from "@/lib/services/telegram-bot";
 
 interface GenerateVideoRequest {
   telegramId: number;
@@ -38,43 +37,21 @@ export async function POST(request: Request) {
       );
     }
 
-    let videoId: string;
-
+    // Validate input type specific fields
     if (body.inputType === "text") {
-      // Validate text input
       if (!body.text || !body.voiceId) {
         return NextResponse.json(
           { success: false, error: "Text and voice ID are required for text input" },
           { status: 400 }
         );
       }
-
-      videoId = await heygenApi.generateVideoWithText({
-        avatarId: body.avatarId,
-        voiceId: body.voiceId,
-        text: body.text,
-        avatarStyle: body.avatarStyle,
-        aspectRatio: body.aspectRatio,
-        background: body.background,
-        test: body.test,
-      });
     } else if (body.inputType === "audio") {
-      // Validate audio input
       if (!body.audioUrl) {
         return NextResponse.json(
           { success: false, error: "Audio URL is required for audio input" },
           { status: 400 }
         );
       }
-
-      videoId = await heygenApi.generateVideoWithAudio({
-        avatarId: body.avatarId,
-        audioUrl: body.audioUrl,
-        avatarStyle: body.avatarStyle,
-        aspectRatio: body.aspectRatio,
-        background: body.background,
-        test: body.test,
-      });
     } else {
       return NextResponse.json(
         { success: false, error: "Invalid input type. Must be 'text' or 'audio'" },
@@ -82,36 +59,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Save to history
-    try {
-      await createVideoGeneration({
-        telegramId: body.telegramId,
-        videoId: videoId,
-        inputType: body.inputType,
-        avatarId: body.avatarId,
-        avatarName: body.avatarName,
-        voiceId: body.voiceId,
-        inputText: body.text,
-        audioUrl: body.audioUrl,
-        aspectRatio: body.aspectRatio || "16:9",
-        avatarStyle: body.avatarStyle || "normal",
-        testMode: body.test || false,
-      });
-    } catch (historyError) {
-      console.error("Error saving to history:", historyError);
-      // Don't fail the request if history save fails
+    // Send generation request to Telegram bot (n8n will process it)
+    const sent = await sendGenerationRequest(body.telegramId, {
+      avatarId: body.avatarId,
+      avatarName: body.avatarName,
+      voiceId: body.voiceId,
+      text: body.text,
+      audioUrl: body.audioUrl,
+      inputType: body.inputType,
+      avatarStyle: body.avatarStyle,
+      aspectRatio: body.aspectRatio,
+      background: body.background,
+      test: body.test,
+    });
+
+    if (!sent) {
+      return NextResponse.json(
+        { success: false, error: "Failed to send generation request to Telegram bot" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      data: { videoId },
+      data: { message: "Generation request sent to Telegram bot" },
     });
   } catch (error) {
-    console.error("Error generating video:", error);
+    console.error("Error sending generation request:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to generate video",
+        error: error instanceof Error ? error.message : "Failed to send generation request",
       },
       { status: 500 }
     );
