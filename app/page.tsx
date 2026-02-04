@@ -68,13 +68,31 @@ export default function Home() {
             // Search in all avatars first
             let foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
             
-            // If not found, search in group avatars
-            if (!foundAvatar && groupAvatars.length > 0) {
-              foundAvatar = groupAvatars.find((a) => a.avatar_id === settings.avatarId);
-            }
-
+            // If found in all avatars, ensure group is reset to null (show all)
             if (foundAvatar) {
+              if (state.selectedGroupId !== null) {
+                dispatch(videoActions.setGroup(null));
+              }
               dispatch(videoActions.setAvatar(foundAvatar));
+            } else {
+              // If not found in all avatars, search in group avatars
+              // This means avatar is in a group, so group should already be selected
+              if (groupAvatars.length > 0) {
+                foundAvatar = groupAvatars.find((a) => a.avatar_id === settings.avatarId);
+                if (foundAvatar) {
+                  dispatch(videoActions.setAvatar(foundAvatar));
+                }
+              } else {
+                // Avatar not found in current group, try to find which group it belongs to
+                // For now, just search in all avatars again (maybe it was added to all list)
+                foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
+                if (foundAvatar) {
+                  if (state.selectedGroupId !== null) {
+                    dispatch(videoActions.setGroup(null));
+                  }
+                  dispatch(videoActions.setAvatar(foundAvatar));
+                }
+              }
             }
           }
 

@@ -14,6 +14,7 @@ interface AvatarSelectorProps {
   onGroupSelect: (groupId: string | null) => void;
   isLoading: boolean;
   error: string | null;
+  initialPage?: number; // Page to open when selectedAvatar is set
 }
 
 const AVATARS_PER_PAGE = 15;
@@ -27,9 +28,10 @@ export function AvatarSelector({
   onGroupSelect,
   isLoading,
   error,
+  initialPage,
 }: AvatarSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage || 1);
 
   // Filter avatars by search query
   const filteredAvatars = useMemo(
@@ -46,10 +48,27 @@ export function AvatarSelector({
   const endIndex = startIndex + AVATARS_PER_PAGE;
   const paginatedAvatars = filteredAvatars.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search changes or filtered results change
+  // Navigate to page with selected avatar when it's set and visible
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filteredAvatars.length]);
+    if (selectedAvatar && filteredAvatars.length > 0) {
+      const avatarIndex = filteredAvatars.findIndex(
+        (a) => a.avatar_id === selectedAvatar.avatar_id
+      );
+      if (avatarIndex !== -1) {
+        const page = Math.ceil((avatarIndex + 1) / AVATARS_PER_PAGE);
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+          setCurrentPage(page);
+        }
+      }
+    }
+  }, [selectedAvatar?.avatar_id, filteredAvatars, totalPages]); // Only depend on avatar_id to avoid unnecessary recalculations
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery]);
 
   // Reset page if current page is out of bounds
   useEffect(() => {
