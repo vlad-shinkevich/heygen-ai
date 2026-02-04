@@ -281,3 +281,130 @@ export function applyTelegramTheme() {
   }
 }
 
+// ============ Send Data to Bot ============
+
+/**
+ * Send data to bot via Telegram WebApp API
+ * This sends data from the user to the bot (not from bot to user)
+ * The bot receives this data via the 'web_app_data' event
+ */
+export function sendDataToBot(data: string): boolean {
+  const webApp = getTelegramWebApp();
+  if (!webApp) {
+    console.error("Telegram WebApp is not available");
+    return false;
+  }
+
+  try {
+    webApp.sendData(data);
+    return true;
+  } catch (error) {
+    console.error("Error sending data to bot:", error);
+    return false;
+  }
+}
+
+/**
+ * Send generation request as message to bot
+ * Opens chat with bot and sends message with parameters
+ * n8n will receive this message and process it
+ */
+export function sendGenerationMessageToBot(
+  botUsername: string,
+  data: {
+    avatarId: string;
+    avatarName?: string;
+    voiceId?: string;
+    text?: string;
+    audioUrl?: string;
+    inputType: "text" | "audio";
+    avatarStyle?: "normal" | "circle" | "closeUp";
+    aspectRatio?: "16:9" | "9:16" | "1:1";
+    background?: {
+      type: "color" | "image" | "video";
+      value: string;
+    };
+    test?: boolean;
+  }
+): boolean {
+  const webApp = getTelegramWebApp();
+  if (!webApp) {
+    console.error("Telegram WebApp is not available");
+    return false;
+  }
+
+  try {
+    // Format message for n8n to parse
+    // User sees friendly message, n8n extracts JSON
+    const userMessage = "Генерация отправлена ✅";
+    
+    const jsonData = JSON.stringify({
+      type: "video_generation",
+      avatarId: data.avatarId,
+      avatarName: data.avatarName,
+      voiceId: data.voiceId,
+      text: data.text,
+      audioUrl: data.audioUrl,
+      inputType: data.inputType,
+      avatarStyle: data.avatarStyle || "normal",
+      aspectRatio: data.aspectRatio || "16:9",
+      background: data.background,
+      test: data.test || false,
+    });
+
+    // Combine message: user-friendly text + JSON data
+    // Format: "User message\n\nJSON_DATA"
+    const fullMessage = `${userMessage}\n\n${jsonData}`;
+
+    // Encode message for URL
+    const encodedMessage = encodeURIComponent(fullMessage);
+
+    // Open chat with bot and send message via deep link
+    // Format: https://t.me/bot_username?start=ENCODED_MESSAGE
+    const botUrl = `https://t.me/${botUsername}?start=${encodedMessage}`;
+    
+    webApp.openTelegramLink(botUrl);
+    
+    return true;
+  } catch (error) {
+    console.error("Error sending message to bot:", error);
+    return false;
+  }
+}
+
+/**
+ * Send generation request data to bot via sendData (alternative method)
+ * Bot receives data via 'web_app_data' event
+ */
+export function sendGenerationDataToBot(data: {
+  avatarId: string;
+  avatarName?: string;
+  voiceId?: string;
+  text?: string;
+  audioUrl?: string;
+  inputType: "text" | "audio";
+  avatarStyle?: "normal" | "circle" | "closeUp";
+  aspectRatio?: "16:9" | "9:16" | "1:1";
+  background?: {
+    type: "color" | "image" | "video";
+    value: string;
+  };
+  test?: boolean;
+}): boolean {
+  const jsonData = JSON.stringify({
+    type: "video_generation",
+    avatarId: data.avatarId,
+    avatarName: data.avatarName,
+    voiceId: data.voiceId,
+    text: data.text,
+    audioUrl: data.audioUrl,
+    inputType: data.inputType,
+    avatarStyle: data.avatarStyle || "normal",
+    aspectRatio: data.aspectRatio || "16:9",
+    background: data.background,
+    test: data.test || false,
+  });
+
+  return sendDataToBot(jsonData);
+}
+

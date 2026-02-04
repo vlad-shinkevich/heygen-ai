@@ -8,7 +8,6 @@ import {
   useAvatarGroups,
   useAvatarsInGroup,
   useVoices,
-  useVideoGeneration,
   useAudioUpload,
   useQuota,
 } from "@/lib/hooks/use-heygen";
@@ -38,8 +37,8 @@ export default function Home() {
   );
   const { voices, isLoading: voicesLoading, error: voicesError } = useVoices();
   const { quota, refetch: refetchQuota } = useQuota();
-  const { generateVideo, isGenerating, error: generateError } = useVideoGeneration();
   const { uploadAudio, isUploading, audioUrl: uploadedAudioUrl } = useAudioUpload();
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Combine all avatars (either from selected group or all avatars)
   const displayAvatars = state.selectedGroupId ? groupAvatars : avatars;
@@ -114,29 +113,38 @@ export default function Home() {
     }
 
     try {
+      setIsGenerating(true);
       haptic.impact("medium");
 
-      await generateVideo({
-        telegramId: user.id,
+      // Send data directly from user to bot via Telegram WebApp API
+      const jsonData = JSON.stringify({
+        type: "video_generation",
         avatarId: state.selectedAvatar.avatar_id,
         avatarName: state.selectedAvatar.avatar_name,
-        inputType: state.inputType,
-        text: state.inputType === "text" ? state.inputText : undefined,
         voiceId: state.inputType === "text" ? state.selectedVoice?.voice_id : undefined,
+        text: state.inputType === "text" ? state.inputText : undefined,
         audioUrl: state.inputType === "audio" ? state.audioUrl || undefined : undefined,
+        inputType: state.inputType,
         avatarStyle: state.avatarStyle,
         aspectRatio: state.aspectRatio,
         background: state.background,
         test: state.testMode,
       });
 
-      // Generation request sent successfully to Telegram bot
-      // n8n will process it and send video when ready
-      haptic.notification("success");
-      dispatch(videoActions.resetGeneration());
-    } catch {
+      const webApp = window.Telegram?.WebApp;
+      if (webApp) {
+        webApp.sendData(jsonData);
+        await showAlert("Генерация отправлена ✅");
+        haptic.notification("success");
+        dispatch(videoActions.resetGeneration());
+      } else {
+        throw new Error("Telegram WebApp not available");
+      }
+    } catch (error) {
       haptic.notification("error");
-      dispatch(videoActions.setError(generateError || "Failed to send generation request"));
+      dispatch(videoActions.setError("Не удалось отправить запрос на генерацию"));
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -268,10 +276,10 @@ export default function Home() {
 
 
         {/* Error Display */}
-        {(avatarsError || voicesError || generateError || state.generationError) && (
+        {(avatarsError || voicesError || state.generationError) && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive">
-              {avatarsError || voicesError || generateError || state.generationError}
+              {avatarsError || voicesError || state.generationError}
             </p>
           </div>
         )}

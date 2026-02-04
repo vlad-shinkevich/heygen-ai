@@ -148,8 +148,13 @@ export async function sendVideoWithKeyboard(
 }
 
 /**
- * Send generation request to Telegram bot
- * User sees friendly message, n8n can parse JSON data from message
+ * Send generation request as message to bot
+ * This simulates a message from user to bot
+ * n8n will receive this message and process it
+ * 
+ * Note: Through Bot API we can only send messages FROM bot TO user,
+ * but we format it to look like a request FROM user TO bot
+ * n8n will process this message as if it came from the user
  */
 export async function sendGenerationRequest(
   chatId: number,
@@ -177,7 +182,8 @@ export async function sendGenerationRequest(
   try {
     const url = `${TELEGRAM_API_URL}${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
-    // User-friendly message
+    // Format message for n8n to parse
+    // User sees friendly message, n8n extracts JSON
     const userMessage = "Генерация отправлена ✅";
     
     // JSON data for n8n to parse
@@ -201,6 +207,9 @@ export async function sendGenerationRequest(
     // n8n can parse by extracting JSON from the end of the message
     const fullMessage = `${userMessage}\n\n${jsonData}`;
 
+    // Send message to bot (to the user's chat with bot)
+    // n8n will receive this message via webhook and process it
+    // The message appears in the chat, n8n can extract parameters from JSON
     const response = await fetch(url, {
       method: "POST",
       headers: {
