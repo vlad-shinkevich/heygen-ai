@@ -36,80 +36,135 @@ export async function POST(request: Request) {
     // Save settings to Supabase
     const supabase = getSupabaseClient();
 
-    // Prepare data - always use provided values, use defaults only if undefined
-    const settingsData: any = {
+    // Log incoming body to see what we receive
+    console.log("Received body:", JSON.stringify(body, null, 2));
+    console.log("Body values check:", {
+      aspectRatio: body.aspectRatio,
+      aspectRatioType: typeof body.aspectRatio,
+      avatarStyle: body.avatarStyle,
+      avatarStyleType: typeof body.avatarStyle,
+      background: body.background,
+    });
+
+    // Prepare data DIRECTLY from body
+    // IMPORTANT: If value is undefined, don't include it in the object
+    // This way DB will use DEFAULT, but if value is provided, it will be used
+    const dbData: any = {
       telegram_id: body.telegramId,
       avatar_id: body.avatarId,
       avatar_name: body.avatarName || null,
       voice_id: body.voiceId,
-      aspect_ratio: body.aspectRatio !== undefined ? body.aspectRatio : "16:9",
-      avatar_style: body.avatarStyle !== undefined ? body.avatarStyle : "normal",
     };
 
-    // Background is JSONB, pass object directly (Supabase will handle it)
-    if (body.background) {
-      settingsData.background = body.background;
-    } else {
-      settingsData.background = null;
+    // Only include aspect_ratio if it's provided (not undefined)
+    if (body.aspectRatio !== undefined && body.aspectRatio !== null) {
+      dbData.aspect_ratio = body.aspectRatio;
     }
 
-    console.log("Saving settings:", {
-      telegram_id: settingsData.telegram_id,
-      avatar_id: settingsData.avatar_id,
-      avatar_name: settingsData.avatar_name,
-      voice_id: settingsData.voice_id,
-      aspect_ratio: settingsData.aspect_ratio,
-      avatar_style: settingsData.avatar_style,
-      background: settingsData.background,
+    // Only include avatar_style if it's provided (not undefined)
+    if (body.avatarStyle !== undefined && body.avatarStyle !== null) {
+      dbData.avatar_style = body.avatarStyle;
+    }
+
+    // Background
+    if (body.background) {
+      dbData.background = body.background;
+    } else {
+      dbData.background = null;
+    }
+
+    console.log("DB data prepared (direct from body):", JSON.stringify(dbData, null, 2));
+    console.log("Field check:", {
+      has_aspect_ratio: 'aspect_ratio' in dbData,
+      aspect_ratio_value: dbData.aspect_ratio,
+      has_avatar_style: 'avatar_style' in dbData,
+      avatar_style_value: dbData.avatar_style,
     });
 
-    // Check if settings exist for this user
-    const { data: existingSettings } = await supabase
+    // Check if record exists
+    const { data: existing } = await supabase
       .from("user_settings")
       .select("telegram_id")
       .eq("telegram_id", body.telegramId)
-      .single();
+      .maybeSingle();
 
     let error;
     let data;
 
-    if (existingSettings) {
-      // Update existing record - explicitly update all fields
-      const { error: updateError, data: updateData } = await supabase
+    if (existing) {
+      console.log("Record exists, updating...");
+      // UPDATE - build payload from dbData, only include fields that exist
+      const updatePayload: any = {
+        avatar_id: dbData.avatar_id,
+        avatar_name: dbData.avatar_name,
+        voice_id: dbData.voice_id,
+        background: dbData.background,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only include aspect_ratio if it was in dbData
+      if ('aspect_ratio' in dbData) {
+        updatePayload.aspect_ratio = dbData.aspect_ratio;
+      }
+      
+      // Only include avatar_style if it was in dbData
+      if ('avatar_style' in dbData) {
+        updatePayload.avatar_style = dbData.avatar_style;
+      }
+      
+      console.log("Update payload (before send):", JSON.stringify(updatePayload, null, 2));
+      
+      const result = await supabase
         .from("user_settings")
-        .update({
-          avatar_id: settingsData.avatar_id,
-          avatar_name: settingsData.avatar_name,
-          voice_id: settingsData.voice_id,
-          aspect_ratio: settingsData.aspect_ratio,
-          avatar_style: settingsData.avatar_style,
-          background: settingsData.background,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("telegram_id", body.telegramId)
         .select();
       
-      error = updateError;
-      data = updateData;
+      error = result.error;
+      data = result.data;
+      console.log("Update result:", { error, data: result.data });
+      if (result.data && result.data[0]) {
+        console.log("Updated record in DB:", {
+          aspect_ratio: result.data[0].aspect_ratio,
+          avatar_style: result.data[0].avatar_style,
+          background: result.data[0].background,
+        });
+      }
     } else {
-      // Insert new record
-      const { error: insertError, data: insertData } = await supabase
+      console.log("Record does not exist, inserting...");
+      // INSERT - use dbData directly (it already has only the fields we need)
+      const insertPayload: any = {
+        ...dbData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      console.log("Insert payload (before send):", JSON.stringify(insertPayload, null, 2));
+      
+      const result = await supabase
         .from("user_settings")
-        .insert({
-          ...settingsData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .insert(insertPayload)
         .select();
       
-      error = insertError;
-      data = insertData;
+      error = result.error;
+      data = result.data;
+      console.log("Insert result:", { error, data: result.data });
+      if (result.data && result.data[0]) {
+        console.log("Inserted record in DB:", {
+          aspect_ratio: result.data[0].aspect_ratio,
+          avatar_style: result.data[0].avatar_style,
+          background: result.data[0].background,
+        });
+      }
     }
 
     if (error) {
-      console.error("Supabase upsert error:", error);
+      console.error("Supabase error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
     } else {
       console.log("Settings saved successfully:", data);
+      console.log("Saved aspect_ratio:", data?.[0]?.aspect_ratio);
+      console.log("Saved avatar_style:", data?.[0]?.avatar_style);
+      console.log("Saved background:", data?.[0]?.background);
     }
 
     if (error) {
