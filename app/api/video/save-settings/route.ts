@@ -81,80 +81,51 @@ export async function POST(request: Request) {
       avatar_style_value: dbData.avatar_style,
     });
 
-    // Check if record exists
-    const { data: existing } = await supabase
+    // Use upsert to handle both insert and update atomically
+    // Build payload - always include all fields we want to set
+    const upsertPayload: any = {
+      telegram_id: dbData.telegram_id,
+      avatar_id: dbData.avatar_id,
+      avatar_name: dbData.avatar_name,
+      voice_id: dbData.voice_id,
+      background: dbData.background,
+      updated_at: new Date().toISOString(),
+    };
+    
+    // Only include aspect_ratio if it was in dbData
+    if ('aspect_ratio' in dbData) {
+      upsertPayload.aspect_ratio = dbData.aspect_ratio;
+    }
+    
+    // Only include avatar_style if it was in dbData
+    if ('avatar_style' in dbData) {
+      upsertPayload.avatar_style = dbData.avatar_style;
+    }
+
+    // Don't set created_at - for new records DB will use DEFAULT NOW()
+    // For existing records, created_at will be preserved
+
+    console.log("Upsert payload (before send):", JSON.stringify(upsertPayload, null, 2));
+    
+    // Use upsert with onConflict on telegram_id
+    const result = await supabase
       .from("user_settings")
-      .select("telegram_id")
-      .eq("telegram_id", body.telegramId)
-      .maybeSingle();
-
-    let error;
-    let data;
-
-    if (existing) {
-      console.log("Record exists, updating...");
-      // UPDATE - build payload from dbData, only include fields that exist
-      const updatePayload: any = {
-        avatar_id: dbData.avatar_id,
-        avatar_name: dbData.avatar_name,
-        voice_id: dbData.voice_id,
-        background: dbData.background,
-        updated_at: new Date().toISOString(),
-      };
-      
-      // Only include aspect_ratio if it was in dbData
-      if ('aspect_ratio' in dbData) {
-        updatePayload.aspect_ratio = dbData.aspect_ratio;
-      }
-      
-      // Only include avatar_style if it was in dbData
-      if ('avatar_style' in dbData) {
-        updatePayload.avatar_style = dbData.avatar_style;
-      }
-      
-      console.log("Update payload (before send):", JSON.stringify(updatePayload, null, 2));
-      
-      const result = await supabase
-        .from("user_settings")
-        .update(updatePayload)
-        .eq("telegram_id", body.telegramId)
-        .select();
-      
-      error = result.error;
-      data = result.data;
-      console.log("Update result:", { error, data: result.data });
-      if (result.data && result.data[0]) {
-        console.log("Updated record in DB:", {
-          aspect_ratio: result.data[0].aspect_ratio,
-          avatar_style: result.data[0].avatar_style,
-          background: result.data[0].background,
-        });
-      }
-    } else {
-      console.log("Record does not exist, inserting...");
-      // INSERT - use dbData directly (it already has only the fields we need)
-      const insertPayload: any = {
-        ...dbData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      console.log("Insert payload (before send):", JSON.stringify(insertPayload, null, 2));
-      
-      const result = await supabase
-        .from("user_settings")
-        .insert(insertPayload)
-        .select();
-      
-      error = result.error;
-      data = result.data;
-      console.log("Insert result:", { error, data: result.data });
-      if (result.data && result.data[0]) {
-        console.log("Inserted record in DB:", {
-          aspect_ratio: result.data[0].aspect_ratio,
-          avatar_style: result.data[0].avatar_style,
-          background: result.data[0].background,
-        });
-      }
+      .upsert(upsertPayload, {
+        onConflict: 'telegram_id',
+        ignoreDuplicates: false
+      })
+      .select();
+    
+    const error = result.error;
+    const data = result.data;
+    
+    console.log("Upsert result:", { error, data: result.data });
+    if (result.data && result.data[0]) {
+      console.log("Saved record in DB:", {
+        aspect_ratio: result.data[0].aspect_ratio,
+        avatar_style: result.data[0].avatar_style,
+        background: result.data[0].background,
+      });
     }
 
     if (error) {
