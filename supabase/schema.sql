@@ -177,6 +177,48 @@ CREATE POLICY "Service role has full access" ON credit_tracking
     WITH CHECK (true);
 
 -- ============================================
+-- Table: user_settings
+-- Stores user video generation settings
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS user_settings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    telegram_id BIGINT NOT NULL UNIQUE,
+    avatar_id TEXT NOT NULL,
+    avatar_name TEXT,
+    voice_id TEXT NOT NULL,
+    aspect_ratio TEXT DEFAULT '16:9',
+    avatar_style TEXT DEFAULT 'normal',
+    background JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Foreign key to allowed_users
+    CONSTRAINT fk_settings_user FOREIGN KEY (telegram_id) 
+        REFERENCES allowed_users(telegram_id) ON DELETE CASCADE
+);
+
+-- Index for fast lookup
+CREATE INDEX IF NOT EXISTS idx_user_settings_telegram_id ON user_settings(telegram_id);
+
+-- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
+CREATE TRIGGER update_user_settings_updated_at
+    BEFORE UPDATE ON user_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable RLS
+ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Service role has full access
+DROP POLICY IF EXISTS "Service role has full access" ON user_settings;
+CREATE POLICY "Service role has full access" ON user_settings
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
+
+-- ============================================
 -- Function: Update credit tracking
 -- ============================================
 

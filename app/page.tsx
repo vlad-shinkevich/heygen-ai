@@ -82,26 +82,29 @@ export default function Home() {
       setIsGenerating(true);
       haptic.impact("medium");
 
-      // Send settings from user to bot via Telegram WebApp API
-      // Text/audio will come separately from bot buttons
-      const jsonData = JSON.stringify({
-        type: "settings",
-        avatarId: state.selectedAvatar.avatar_id,
-        avatarName: state.selectedAvatar.avatar_name,
-        voiceId: state.selectedVoice.voice_id,
-        aspectRatio: state.aspectRatio,
-        avatarStyle: state.avatarStyle,
-        background: state.background,
+      // Save settings to Supabase database
+      const response = await fetch("/api/video/save-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId: user.id,
+          avatarId: state.selectedAvatar.avatar_id,
+          avatarName: state.selectedAvatar.avatar_name,
+          voiceId: state.selectedVoice.voice_id,
+          aspectRatio: state.aspectRatio,
+          avatarStyle: state.avatarStyle,
+          background: state.background,
+        }),
       });
 
-      const webApp = window.Telegram?.WebApp;
-      if (webApp) {
-        webApp.sendData(jsonData);
+      const result = await response.json();
+
+      if (result.success) {
         await showAlert("Settings saved ✅");
         haptic.notification("success");
         dispatch(videoActions.resetGeneration());
       } else {
-        throw new Error("Telegram WebApp not available");
+        throw new Error(result.error || "Failed to save settings");
       }
     } catch (error) {
       haptic.notification("error");
