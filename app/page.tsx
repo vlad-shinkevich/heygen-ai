@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTelegram, useTelegramHaptic } from "@/lib/hooks/use-telegram";
 import { useAuth } from "@/lib/hooks/use-auth";
 import {
@@ -62,7 +62,12 @@ export default function Home() {
 
 
   // Handle generate (save settings)
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
+    // Prevent double calls
+    if (isGenerating) {
+      return;
+    }
+
     if (!state.selectedAvatar) {
       haptic.notification("error");
       return;
@@ -117,7 +122,7 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [isGenerating, state.selectedAvatar, state.selectedVoice, state.aspectRatio, state.avatarStyle, state.background, user?.id, haptic, dispatch]);
 
   // Check if settings can be saved
   const canGenerate = state.selectedAvatar && state.selectedVoice;

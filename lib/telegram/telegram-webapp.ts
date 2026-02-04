@@ -174,6 +174,9 @@ export function hapticSelection() {
 
 // ============ Main Button ============
 
+// Store the current onClick handler to be able to remove it
+let currentMainButtonHandler: (() => void) | null = null;
+
 export function showMainButton(
   text: string,
   onClick: () => void,
@@ -181,6 +184,11 @@ export function showMainButton(
 ) {
   const webApp = getTelegramWebApp();
   if (webApp?.MainButton) {
+    // Remove previous handler if exists
+    if (currentMainButtonHandler) {
+      webApp.MainButton.offClick(currentMainButtonHandler);
+    }
+    
     webApp.MainButton.setText(text);
     if (options?.color) {
       webApp.MainButton.setParams({ color: options.color });
@@ -188,6 +196,9 @@ export function showMainButton(
     if (options?.textColor) {
       webApp.MainButton.setParams({ text_color: options.textColor });
     }
+    
+    // Store and register new handler
+    currentMainButtonHandler = onClick;
     webApp.MainButton.onClick(onClick);
     webApp.MainButton.show();
   }
@@ -195,8 +206,16 @@ export function showMainButton(
 
 export function hideMainButton() {
   const webApp = getTelegramWebApp();
-  webApp?.MainButton?.hide();
+  if (webApp?.MainButton) {
+    // Remove handler when hiding button
+    if (currentMainButtonHandler) {
+      webApp.MainButton.offClick(currentMainButtonHandler);
+      currentMainButtonHandler = null;
+    }
+    webApp.MainButton.hide();
+  }
 }
+
 
 export function setMainButtonLoading(loading: boolean) {
   const webApp = getTelegramWebApp();
