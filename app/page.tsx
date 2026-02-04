@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useTelegram, useTelegramHaptic } from "@/lib/hooks/use-telegram";
 import { useAuth } from "@/lib/hooks/use-auth";
 import {
@@ -36,10 +36,78 @@ export default function Home() {
   const { voices, isLoading: voicesLoading, error: voicesError } = useVoices();
   const { quota, refetch: refetchQuota } = useQuota();
   const [isGenerating, setIsGenerating] = useState(false);
+  const settingsLoadedRef = useRef(false);
 
   // Combine all avatars (either from selected group or all avatars)
   const displayAvatars = state.selectedGroupId ? groupAvatars : avatars;
   const isLoadingAvatars = state.selectedGroupId ? groupAvatarsLoading : avatarsLoading;
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const loadSavedSettings = async () => {
+      // Only load once
+      if (settingsLoadedRef.current) return;
+      
+      // Wait for user, avatars, and voices to be loaded
+      if (!user?.id || avatarsLoading || voicesLoading || avatars.length === 0 || voices.length === 0) {
+        return;
+      }
+
+      // Mark as loading to prevent duplicate loads
+      settingsLoadedRef.current = true;
+
+      try {
+        const response = await fetch(`/api/video/get-settings?telegramId=${user.id}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const settings = result.data;
+
+          // Find and set avatar
+          if (settings.avatarId) {
+            // Search in all avatars first
+            let foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
+            
+            // If not found, search in group avatars
+            if (!foundAvatar && groupAvatars.length > 0) {
+              foundAvatar = groupAvatars.find((a) => a.avatar_id === settings.avatarId);
+            }
+
+            if (foundAvatar) {
+              dispatch(videoActions.setAvatar(foundAvatar));
+            }
+          }
+
+          // Find and set voice
+          if (settings.voiceId) {
+            const foundVoice = voices.find((v) => v.voice_id === settings.voiceId);
+            if (foundVoice) {
+              dispatch(videoActions.setVoice(foundVoice));
+            }
+          }
+
+          // Restore other settings
+          if (settings.aspectRatio) {
+            dispatch(videoActions.setAspectRatio(settings.aspectRatio));
+          }
+
+          if (settings.avatarStyle) {
+            dispatch(videoActions.setAvatarStyle(settings.avatarStyle));
+          }
+
+          if (settings.background) {
+            dispatch(videoActions.setBackground(settings.background));
+          }
+        }
+      } catch (error) {
+        console.error("Error loading saved settings:", error);
+        // Don't mark as loaded on error, so we can retry
+        settingsLoadedRef.current = false;
+      }
+    };
+
+    loadSavedSettings();
+  }, [user?.id, avatars, voices, avatarsLoading, voicesLoading, groupAvatars, dispatch]);
 
   // Handle avatar selection
   const handleAvatarSelect = (avatar: Avatar) => {
