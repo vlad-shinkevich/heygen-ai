@@ -36,23 +36,29 @@ export async function POST(request: Request) {
     // Save settings to Supabase
     const supabase = getSupabaseClient();
 
+    // Prepare data for upsert
+    const settingsData: any = {
+      telegram_id: body.telegramId,
+      avatar_id: body.avatarId,
+      avatar_name: body.avatarName || null,
+      voice_id: body.voiceId,
+      aspect_ratio: body.aspectRatio || "16:9",
+      avatar_style: body.avatarStyle || "normal",
+      updated_at: new Date().toISOString(),
+    };
+
+    // Background is JSONB, pass object directly (Supabase will handle it)
+    if (body.background) {
+      settingsData.background = body.background;
+    } else {
+      settingsData.background = null;
+    }
+
     const { error } = await supabase
       .from("user_settings")
-      .upsert(
-        {
-          telegram_id: body.telegramId,
-          avatar_id: body.avatarId,
-          avatar_name: body.avatarName,
-          voice_id: body.voiceId,
-          aspect_ratio: body.aspectRatio || "16:9",
-          avatar_style: body.avatarStyle || "normal",
-          background: body.background ? JSON.stringify(body.background) : null,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "telegram_id",
-        }
-      );
+      .upsert(settingsData, {
+        onConflict: "telegram_id",
+      });
 
     if (error) {
       console.error("Error saving settings to Supabase:", error);
