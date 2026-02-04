@@ -8,17 +8,15 @@ import {
   useAvatarGroups,
   useAvatarsInGroup,
   useVoices,
-  useAudioUpload,
   useQuota,
 } from "@/lib/hooks/use-heygen";
 import { useVideoStore, videoActions } from "@/lib/store/video-store";
+import { showAlert } from "@/lib/telegram/telegram-webapp";
 import type { Avatar, Voice } from "@/lib/types/heygen";
 
 // Components
 import { AvatarSelector } from "@/components/avatar-selector";
 import { VoiceSelector } from "@/components/voice-selector";
-import { TextInput } from "@/components/text-input";
-import { AudioUpload } from "@/components/audio-upload";
 import { VideoSettings } from "@/components/video-settings";
 import { GenerateButton } from "@/components/generate-button";
 import { QuotaDisplay } from "@/components/quota-display";
@@ -37,7 +35,6 @@ export default function Home() {
   );
   const { voices, isLoading: voicesLoading, error: voicesError } = useVoices();
   const { quota, refetch: refetchQuota } = useQuota();
-  const { uploadAudio, isUploading, audioUrl: uploadedAudioUrl } = useAudioUpload();
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Combine all avatars (either from selected group or all avatars)
@@ -63,34 +60,8 @@ export default function Home() {
     dispatch(videoActions.setAvatar(null)); // Reset avatar when changing group
   };
 
-  // Handle text input
-  const handleTextChange = (text: string) => {
-    dispatch(videoActions.setInputText(text));
-  };
 
-  // Handle audio upload
-  const handleAudioUpload = async (file: File) => {
-    try {
-      const url = await uploadAudio(file);
-      dispatch(videoActions.setAudioUrl(url, file.name));
-      haptic.notification("success");
-    } catch {
-      haptic.notification("error");
-    }
-  };
-
-  // Handle audio remove
-  const handleAudioRemove = () => {
-    dispatch(videoActions.setAudioUrl(null, null));
-  };
-
-  // Handle input type change
-  const handleInputTypeChange = (type: "text" | "audio") => {
-    haptic.selection();
-    dispatch(videoActions.setInputType(type));
-  };
-
-  // Handle generate
+  // Handle generate (save settings)
   const handleGenerate = async () => {
     if (!state.selectedAvatar) {
       haptic.notification("error");
@@ -102,12 +73,7 @@ export default function Home() {
       return;
     }
 
-    if (state.inputType === "text" && (!state.inputText || !state.selectedVoice)) {
-      haptic.notification("error");
-      return;
-    }
-
-    if (state.inputType === "audio" && !state.audioUrl) {
+    if (!state.selectedVoice) {
       haptic.notification("error");
       return;
     }
@@ -116,25 +82,22 @@ export default function Home() {
       setIsGenerating(true);
       haptic.impact("medium");
 
-      // Send data directly from user to bot via Telegram WebApp API
+      // Send settings from user to bot via Telegram WebApp API
+      // Text/audio will come separately from bot buttons
       const jsonData = JSON.stringify({
-        type: "video_generation",
+        type: "settings",
         avatarId: state.selectedAvatar.avatar_id,
         avatarName: state.selectedAvatar.avatar_name,
-        voiceId: state.inputType === "text" ? state.selectedVoice?.voice_id : undefined,
-        text: state.inputType === "text" ? state.inputText : undefined,
-        audioUrl: state.inputType === "audio" ? state.audioUrl || undefined : undefined,
-        inputType: state.inputType,
-        avatarStyle: state.avatarStyle,
+        voiceId: state.selectedVoice.voice_id,
         aspectRatio: state.aspectRatio,
+        avatarStyle: state.avatarStyle,
         background: state.background,
-        test: state.testMode,
       });
 
       const webApp = window.Telegram?.WebApp;
       if (webApp) {
         webApp.sendData(jsonData);
-        await showAlert("Генерация отправлена ✅");
+        await showAlert("Settings saved ✅");
         haptic.notification("success");
         dispatch(videoActions.resetGeneration());
       } else {
@@ -142,17 +105,14 @@ export default function Home() {
       }
     } catch (error) {
       haptic.notification("error");
-      dispatch(videoActions.setError("Не удалось отправить запрос на генерацию"));
+      dispatch(videoActions.setError("Failed to save settings"));
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Check if generation is possible
-  const canGenerate =
-    state.selectedAvatar &&
-    ((state.inputType === "text" && state.inputText.trim() && state.selectedVoice) ||
-      (state.inputType === "audio" && state.audioUrl));
+  // Check if settings can be saved
+  const canGenerate = state.selectedAvatar && state.selectedVoice;
 
   if (!isReady) {
     return (
@@ -167,7 +127,7 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">HeyGen Video</h1>
+          <h1 className="text-lg font-semibold">Settings</h1>
           <QuotaDisplay quota={quota} />
         </div>
       </header>
@@ -190,77 +150,24 @@ export default function Home() {
           />
         </section>
 
-        {/* Voice Selection (only for text input) */}
-        {state.inputType === "text" && (
-          <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-3">
-              2. Select Voice
-            </h2>
-            <VoiceSelector
-              voices={voices}
-              selectedVoice={state.selectedVoice}
-              onVoiceSelect={handleVoiceSelect}
-              isLoading={voicesLoading}
-              error={voicesError}
-            />
-          </section>
-        )}
-
-        {/* Input Type Toggle */}
+        {/* Voice Selection */}
         <section>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            {state.inputType === "text" ? "3" : "2"}. Input Type
+            2. Select Voice
           </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleInputTypeChange("text")}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                state.inputType === "text"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              }`}
-            >
-              Text to Speech
-            </button>
-            <button
-              onClick={() => handleInputTypeChange("audio")}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                state.inputType === "audio"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              }`}
-            >
-              Upload Audio
-            </button>
-          </div>
-        </section>
-
-        {/* Text Input or Audio Upload */}
-        <section>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            {state.inputType === "text" ? "4" : "3"}. {state.inputType === "text" ? "Enter Text" : "Upload Audio"}
-          </h2>
-          {state.inputType === "text" ? (
-            <TextInput
-              value={state.inputText}
-              onChange={handleTextChange}
-              maxLength={5000}
-            />
-          ) : (
-            <AudioUpload
-              audioUrl={state.audioUrl}
-              fileName={state.audioFileName}
-              onUpload={handleAudioUpload}
-              onRemove={handleAudioRemove}
-              isUploading={isUploading}
-            />
-          )}
+          <VoiceSelector
+            voices={voices}
+            selectedVoice={state.selectedVoice}
+            onVoiceSelect={handleVoiceSelect}
+            isLoading={voicesLoading}
+            error={voicesError}
+          />
         </section>
 
         {/* Video Settings */}
         <section>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            {state.inputType === "text" ? "5" : "4"}. Video Settings
+            3. Video Settings
           </h2>
           <VideoSettings
             aspectRatio={state.aspectRatio}
@@ -285,7 +192,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Fixed Generate Button */}
+      {/* Fixed Save Settings Button */}
       <GenerateButton
         onClick={handleGenerate}
         disabled={!canGenerate}

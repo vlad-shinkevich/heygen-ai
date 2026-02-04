@@ -27,7 +27,7 @@ export function GenerateButton({
     if (disabled) {
       hideMainButton();
     } else {
-      showMainButton("Generate Video", onClick);
+      showMainButton("Save Settings", onClick);
       setMainButtonLoading(isLoading);
 
       if (isLoading) {
@@ -62,7 +62,7 @@ export function GenerateButton({
         {isLoading ? (
           <>
             <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            <span>Generating...</span>
+            <span>Saving...</span>
           </>
         ) : (
           <>
@@ -85,7 +85,7 @@ export function GenerateButton({
                 d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span>Generate Video</span>
+            <span>Save Settings</span>
           </>
         )}
       </button>
