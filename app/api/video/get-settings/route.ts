@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       data: data ? {
         avatarId: data.avatar_id,
         avatarName: data.avatar_name,
+        avatarImageUrl: data.avatar_image_url,
         voiceId: data.voice_id,
         aspectRatio: data.aspect_ratio,
         avatarStyle: data.avatar_style,

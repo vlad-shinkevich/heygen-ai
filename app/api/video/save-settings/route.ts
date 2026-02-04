@@ -5,6 +5,7 @@ interface SaveSettingsRequest {
   telegramId: number;
   avatarId: string;
   avatarName?: string;
+  avatarImageUrl?: string;
   voiceId: string;
   aspectRatio?: "16:9" | "9:16" | "1:1";
   avatarStyle?: "normal" | "circle" | "closeUp";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       telegram_id: body.telegramId,
       avatar_id: body.avatarId,
       avatar_name: body.avatarName || null,
+      avatar_image_url: body.avatarImageUrl || null,
       voice_id: body.voiceId,
     };
 
@@ -87,6 +89,7 @@ export async function POST(request: Request) {
       telegram_id: dbData.telegram_id,
       avatar_id: dbData.avatar_id,
       avatar_name: dbData.avatar_name,
+      avatar_image_url: dbData.avatar_image_url,
       voice_id: dbData.voice_id,
       background: dbData.background,
       updated_at: new Date().toISOString(),

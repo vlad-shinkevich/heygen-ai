@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     telegram_id BIGINT NOT NULL UNIQUE,
     avatar_id TEXT NOT NULL,
     avatar_name TEXT,
+    avatar_image_url TEXT,
     voice_id TEXT NOT NULL,
     aspect_ratio TEXT DEFAULT '16:9',
     avatar_style TEXT DEFAULT 'normal',
@@ -264,4 +265,11 @@ $$ LANGUAGE plpgsql;
 --     COUNT(*) FILTER (WHERE status = 'failed') as failed
 -- FROM video_generations 
 -- WHERE telegram_id = YOUR_TELEGRAM_ID;
+
+-- ============================================
+-- Migration: Add avatar_image_url to user_settings
+-- Run this if the table already exists
+-- ============================================
+-- ALTER TABLE user_settings 
+-- ADD COLUMN IF NOT EXISTS avatar_image_url TEXT;
 

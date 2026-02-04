@@ -92,6 +92,7 @@ export default function Home() {
         telegramId: user.id,
         avatarId: state.selectedAvatar.avatar_id,
         avatarName: state.selectedAvatar.avatar_name,
+        avatarImageUrl: state.selectedAvatar.preview_image_url,
         voiceId: state.selectedVoice.voice_id,
         aspectRatio: state.aspectRatio,
         avatarStyle: state.avatarStyle,
