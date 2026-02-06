@@ -202,7 +202,7 @@ class HeyGenApiService {
     if (response.error) {
       throw new Error(response.error);
     }
-    return response.data.avatar_groups;
+    return response.data.avatar_group_list;
   }
 
   /**
