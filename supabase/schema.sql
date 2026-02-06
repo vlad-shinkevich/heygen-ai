@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     aspect_ratio TEXT DEFAULT '16:9',
     avatar_style TEXT DEFAULT 'normal',
     background JSONB,
+    current_menu TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
@@ -272,4 +273,11 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 -- ALTER TABLE user_settings 
 -- ADD COLUMN IF NOT EXISTS avatar_image_url TEXT;
+
+-- ============================================
+-- Migration: Add current_menu to user_settings
+-- Run this if the table already exists
+-- ============================================
+-- ALTER TABLE user_settings 
+-- ADD COLUMN IF NOT EXISTS current_menu TEXT;
 

@@ -38,7 +38,7 @@ export function useAuth() {
         user: null,
         error: allowDevAccess 
           ? null 
-          : "Это приложение доступно только через Telegram Mini App. Откройте его через бота в Telegram.",
+          : "This application is only available through Telegram Mini App. Open it through the bot in Telegram.",
         isTelegram: false,
       });
       return;

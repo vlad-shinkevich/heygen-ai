@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import {
   useAvatars,
   useAvatarGroups,
+  useUserAvatarGroups,
   useAvatarsInGroup,
   useVoices,
   useQuota,
@@ -30,17 +31,29 @@ export default function Home() {
   // API Hooks
   const { avatars, isLoading: avatarsLoading, error: avatarsError } = useAvatars();
   const { groups, isLoading: groupsLoading } = useAvatarGroups();
+  const { groups: userGroups, isLoading: userGroupsLoading } = useUserAvatarGroups();
   const { avatars: groupAvatars, isLoading: groupAvatarsLoading } = useAvatarsInGroup(
     state.selectedGroupId
   );
   const { voices, isLoading: voicesLoading, error: voicesError } = useVoices();
   const { quota, refetch: refetchQuota } = useQuota();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<"regular" | "user">("regular");
   const settingsLoadedRef = useRef(false);
+
+  // Get user group avatars if user tab is selected
+  const { avatars: userGroupAvatars, isLoading: userGroupAvatarsLoading } = useAvatarsInGroup(
+    selectedTab === "user" && state.selectedGroupId ? state.selectedGroupId : null
+  );
 
   // Combine all avatars (either from selected group or all avatars)
   const displayAvatars = state.selectedGroupId ? groupAvatars : avatars;
   const isLoadingAvatars = state.selectedGroupId ? groupAvatarsLoading : avatarsLoading;
+  
+  // User avatars display - if no group selected, show empty (will be populated by fetching all groups)
+  // For now, we only show avatars when a specific group is selected
+  const displayUserAvatars = state.selectedGroupId && selectedTab === "user" ? userGroupAvatars : [];
+  const isLoadingUserAvatars = state.selectedGroupId && selectedTab === "user" ? userGroupAvatarsLoading : false;
 
   // Load saved settings on mount
   useEffect(() => {
@@ -133,8 +146,8 @@ export default function Home() {
     dispatch(videoActions.setAvatar(avatar));
   };
 
-  // Handle voice selection
-  const handleVoiceSelect = (voice: Voice) => {
+  // Handle voice selection (can be null for default voice)
+  const handleVoiceSelect = (voice: Voice | null) => {
     haptic.selection();
     dispatch(videoActions.setVoice(voice));
   };
@@ -144,6 +157,14 @@ export default function Home() {
     haptic.selection();
     dispatch(videoActions.setGroup(groupId));
     dispatch(videoActions.setAvatar(null)); // Reset avatar when changing group
+  };
+
+  // Handle tab change
+  const handleTabChange = (tab: "regular" | "user") => {
+    haptic.selection();
+    setSelectedTab(tab);
+    dispatch(videoActions.setGroup(null)); // Reset group when switching tabs
+    dispatch(videoActions.setAvatar(null)); // Reset avatar when switching tabs
   };
 
 
@@ -164,7 +185,8 @@ export default function Home() {
       return;
     }
 
-    if (!state.selectedVoice) {
+    // Voice is required unless avatar has default voice
+    if (!state.selectedVoice && !state.selectedAvatar.default_voice_id) {
       haptic.notification("error");
       return;
     }
@@ -179,7 +201,7 @@ export default function Home() {
         avatarId: state.selectedAvatar.avatar_id,
         avatarName: state.selectedAvatar.avatar_name,
         avatarImageUrl: state.selectedAvatar.preview_image_url,
-        voiceId: state.selectedVoice.voice_id,
+        voiceId: state.selectedVoice?.voice_id || state.selectedAvatar.default_voice_id || null,
         aspectRatio: state.aspectRatio,
         avatarStyle: state.avatarStyle,
         background: state.background,
@@ -197,7 +219,7 @@ export default function Home() {
       const result = await response.json();
 
       if (result.success) {
-        await showAlert("Settings saved ✅");
+        await showAlert("Settings saved");
         haptic.notification("success");
         dispatch(videoActions.resetGeneration());
       } else {
@@ -211,13 +233,32 @@ export default function Home() {
     }
   }, [isGenerating, state.selectedAvatar, state.selectedVoice, state.aspectRatio, state.avatarStyle, state.background, user?.id, haptic, dispatch]);
 
-  // Check if settings can be saved
-  const canGenerate = state.selectedAvatar && state.selectedVoice;
+  // Check if settings can be saved (voice can be null if using default)
+  const canGenerate = state.selectedAvatar && (state.selectedVoice !== null || state.selectedAvatar.default_voice_id);
 
-  if (!isReady) {
+  // Show loading until everything is ready and loaded
+  const isEverythingLoaded = isReady && 
+    !avatarsLoading && 
+    !voicesLoading && 
+    !groupsLoading && 
+    !userGroupsLoading &&
+    avatars.length > 0 && 
+    voices.length > 0;
+
+  if (!isReady || !isEverythingLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Loading...</p>
+            {!isReady && <p className="text-xs text-muted-foreground">Initializing...</p>}
+            {avatarsLoading && <p className="text-xs text-muted-foreground">Loading avatars...</p>}
+            {voicesLoading && <p className="text-xs text-muted-foreground">Loading voices...</p>}
+            {groupsLoading && <p className="text-xs text-muted-foreground">Loading groups...</p>}
+            {userGroupsLoading && <p className="text-xs text-muted-foreground">Loading user avatars...</p>}
+          </div>
+        </div>
       </div>
     );
   }
@@ -241,11 +282,16 @@ export default function Home() {
           <AvatarSelector
             avatars={displayAvatars}
             groups={groups}
+            userGroups={userGroups}
+            userGroupAvatars={displayUserAvatars}
             selectedAvatar={state.selectedAvatar}
             selectedGroupId={state.selectedGroupId}
+            selectedTab={selectedTab}
             onAvatarSelect={handleAvatarSelect}
             onGroupSelect={handleGroupSelect}
+            onTabChange={handleTabChange}
             isLoading={isLoadingAvatars || groupsLoading}
+            isLoadingUserGroups={userGroupsLoading || isLoadingUserAvatars}
             error={avatarsError}
           />
         </section>
@@ -258,6 +304,7 @@ export default function Home() {
           <VoiceSelector
             voices={voices}
             selectedVoice={state.selectedVoice}
+            defaultVoiceId={state.selectedAvatar?.default_voice_id}
             onVoiceSelect={handleVoiceSelect}
             isLoading={voicesLoading}
             error={voicesError}
@@ -273,11 +320,9 @@ export default function Home() {
             aspectRatio={state.aspectRatio}
             avatarStyle={state.avatarStyle}
             background={state.background}
-            testMode={state.testMode}
             onAspectRatioChange={(ratio) => dispatch(videoActions.setAspectRatio(ratio))}
             onAvatarStyleChange={(style) => dispatch(videoActions.setAvatarStyle(style))}
             onBackgroundChange={(bg) => dispatch(videoActions.setBackground(bg))}
-            onTestModeChange={(enabled) => dispatch(videoActions.setTestMode(enabled))}
           />
         </section>
 

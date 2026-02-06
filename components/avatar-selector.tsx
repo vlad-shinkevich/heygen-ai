@@ -8,13 +8,18 @@ import { cn } from "@/lib/utils";
 interface AvatarSelectorProps {
   avatars: Avatar[];
   groups: AvatarGroup[];
+  userGroups?: AvatarGroup[];
+  userGroupAvatars?: Avatar[];
   selectedAvatar: Avatar | null;
   selectedGroupId: string | null;
+  selectedTab?: "regular" | "user";
   onAvatarSelect: (avatar: Avatar) => void;
   onGroupSelect: (groupId: string | null) => void;
+  onTabChange?: (tab: "regular" | "user") => void;
   isLoading: boolean;
+  isLoadingUserGroups?: boolean;
   error: string | null;
-  initialPage?: number; // Page to open when selectedAvatar is set
+  initialPage?: number;
 }
 
 const AVATARS_PER_PAGE = 15;
@@ -22,24 +27,40 @@ const AVATARS_PER_PAGE = 15;
 export function AvatarSelector({
   avatars,
   groups,
+  userGroups = [],
+  userGroupAvatars = [],
   selectedAvatar,
   selectedGroupId,
+  selectedTab = "regular",
   onAvatarSelect,
   onGroupSelect,
+  onTabChange,
   isLoading,
+  isLoadingUserGroups = false,
   error,
   initialPage,
 }: AvatarSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(initialPage || 1);
-
+  
+  // Determine which avatars to show based on tab
+  // For user tab: if a group is selected, show that group's avatars, otherwise show empty
+  // For regular tab: show regular avatars
+  const displayAvatars = selectedTab === "user" 
+    ? (selectedGroupId && userGroupAvatars.length > 0 ? userGroupAvatars : [])
+    : avatars;
+  const displayGroups = selectedTab === "user" ? userGroups : groups;
+  const isDisplayLoading = selectedTab === "user" 
+    ? (isLoadingUserGroups || (selectedGroupId && isLoadingUserGroups)) 
+    : isLoading;
+  
   // Filter avatars by search query
   const filteredAvatars = useMemo(
     () =>
-      avatars.filter((avatar) =>
-        avatar.avatar_name.toLowerCase().includes(searchQuery.toLowerCase())
+      displayAvatars.filter((avatar) =>
+        (avatar.avatar_name || avatar.name || "").toLowerCase().includes(searchQuery.toLowerCase())
       ),
-    [avatars, searchQuery]
+    [displayAvatars, searchQuery]
   );
 
   // Calculate pagination
@@ -87,8 +108,34 @@ export function AvatarSelector({
 
   return (
     <div className="space-y-4">
+      {/* Tabs */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => onTabChange?.("regular")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+            selectedTab === "regular"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Regular
+        </button>
+        <button
+          onClick={() => onTabChange?.("user")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+            selectedTab === "user"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          My Avatars
+        </button>
+      </div>
+
       {/* Group Filter */}
-      {groups.length > 0 && (
+      {displayGroups.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => onGroupSelect(null)}
@@ -101,20 +148,23 @@ export function AvatarSelector({
           >
             All Avatars
           </button>
-          {groups.map((group) => (
-            <button
-              key={group.id}
-              onClick={() => onGroupSelect(group.id)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                selectedGroupId === group.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              )}
-            >
-              {group.name}
-            </button>
-          ))}
+          {displayGroups.map((group) => {
+            const groupId = group.id || group.group_id;
+            return (
+              <button
+                key={groupId}
+                onClick={() => onGroupSelect(groupId || null)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
+                  selectedGroupId === groupId
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                )}
+              >
+                {group.name || "Unnamed Group"}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -128,7 +178,7 @@ export function AvatarSelector({
       />
 
       {/* Avatar Grid */}
-      {isLoading ? (
+      {isDisplayLoading ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div

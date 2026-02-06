@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 interface VoiceSelectorProps {
   voices: Voice[];
   selectedVoice: Voice | null;
-  onVoiceSelect: (voice: Voice) => void;
+  defaultVoiceId?: string | null;
+  onVoiceSelect: (voice: Voice | null) => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -15,6 +16,7 @@ interface VoiceSelectorProps {
 export function VoiceSelector({
   voices,
   selectedVoice,
+  defaultVoiceId,
   onVoiceSelect,
   isLoading,
   error,
@@ -62,6 +64,28 @@ export function VoiceSelector({
       return matchesSearch && matchesLanguage && matchesGender;
     });
   }, [voices, searchQuery, selectedLanguage, selectedGender]);
+
+  // Scroll to selected voice when it's set
+  const selectedVoiceRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (selectedVoice && filteredVoices.length > 0) {
+      const voiceIndex = filteredVoices.findIndex(
+        (v) => v.voice_id === selectedVoice.voice_id
+      );
+      if (voiceIndex !== -1) {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          const voiceElement = document.querySelector(
+            `[data-voice-id="${selectedVoice.voice_id}"]`
+          ) as HTMLElement;
+          if (voiceElement) {
+            voiceElement.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 100);
+      }
+    }
+  }, [selectedVoice?.voice_id, filteredVoices]);
 
   // Handle voice preview
   const handlePreview = async (voice: Voice, e: React.MouseEvent) => {
@@ -131,8 +155,52 @@ export function VoiceSelector({
     );
   }
 
+  // Check if default voice is available
+  const defaultVoice = defaultVoiceId ? voices.find(v => v.voice_id === defaultVoiceId) : null;
+  const isUsingDefault = selectedVoice === null && defaultVoiceId !== null && defaultVoiceId !== undefined;
+
   return (
     <div className="space-y-4">
+      {/* Default Voice Option */}
+      {defaultVoice && (
+        <button
+          onClick={() => onVoiceSelect(null)}
+          className={cn(
+            "w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
+            isUsingDefault
+              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+              : "border-border bg-secondary/50 hover:border-primary/50 hover:bg-secondary"
+          )}
+        >
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-green-500/20 text-green-500">
+            ✓
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">Use Default Voice</p>
+            <p className="text-xs text-muted-foreground">
+              {defaultVoice.name || defaultVoice.voice_id} • {defaultVoice.language} • {defaultVoice.gender}
+            </p>
+          </div>
+          {isUsingDefault && (
+            <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+              <svg
+                className="w-3 h-3 text-primary-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+          )}
+        </button>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {/* Language Filter */}
@@ -189,6 +257,8 @@ export function VoiceSelector({
           {filteredVoices.map((voice) => (
             <button
               key={voice.voice_id}
+              data-voice-id={voice.voice_id}
+              ref={selectedVoice?.voice_id === voice.voice_id ? selectedVoiceRef : null}
               onClick={() => onVoiceSelect(voice)}
               className={cn(
                 "w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left",

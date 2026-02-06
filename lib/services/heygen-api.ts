@@ -191,6 +191,21 @@ class HeyGenApiService {
 
 
   /**
+   * Get avatar groups list (user-created avatars)
+   * https://docs.heygen.com/reference/list-all-avatar-groups
+   * Endpoint: GET /v2/avatar_group.list
+   */
+  async getAvatarGroupsList(includePublic: boolean = false): Promise<AvatarGroup[]> {
+    const response = await this.request<AvatarGroupsResponse>(
+      `/v2/avatar_group.list?include_public=${includePublic}`
+    );
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.data.avatar_groups;
+  }
+
+  /**
    * Get avatars in a specific group
    */
   async getAvatarsInGroup(groupId: string): Promise<Avatar[]> {

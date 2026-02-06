@@ -14,9 +14,11 @@ export interface VideoBackground {
 export interface Avatar {
   avatar_id: string;
   name?: string;
+  avatar_name?: string;
   preview_image_url?: string;
   preview_video_url?: string;
   avatar_style?: "normal" | "circle" | "closeUp";
+  default_voice_id?: string;
   [key: string]: any; // Allow additional properties from API
 }
 
@@ -28,8 +30,15 @@ export interface AvatarDetails {
 }
 
 export interface AvatarGroup {
-  group_id: string;
+  id?: string;
+  group_id?: string;
   name?: string;
+  preview_image?: string;
+  group_type?: string;
+  train_status?: string;
+  default_voice_id?: string;
+  num_looks?: number;
+  created_at?: number;
   [key: string]: any;
 }
 
@@ -108,7 +117,8 @@ export interface AvatarDetailsResponse {
 export interface AvatarGroupsResponse {
   error: null | string;
   data: {
-    avatar_groups: AvatarGroup[];
+    total_count?: number;
+    avatar_group_list: AvatarGroup[];
   };
 }
 

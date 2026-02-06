@@ -7,17 +7,15 @@ interface VideoSettingsProps {
   aspectRatio: "16:9" | "9:16" | "1:1";
   avatarStyle: "normal" | "circle" | "closeUp";
   background: VideoBackground;
-  testMode: boolean;
   onAspectRatioChange: (ratio: "16:9" | "9:16" | "1:1") => void;
   onAvatarStyleChange: (style: "normal" | "circle" | "closeUp") => void;
   onBackgroundChange: (background: VideoBackground) => void;
-  onTestModeChange: (enabled: boolean) => void;
 }
 
 const aspectRatios = [
-  { value: "16:9" as const, label: "16:9", icon: "📺" },
-  { value: "9:16" as const, label: "9:16", icon: "📱" },
-  { value: "1:1" as const, label: "1:1", icon: "🟦" },
+  { value: "16:9" as const, label: "16:9" },
+  { value: "9:16" as const, label: "9:16" },
+  { value: "1:1" as const, label: "1:1" },
 ];
 
 const avatarStyles = [
@@ -43,11 +41,9 @@ export function VideoSettings({
   aspectRatio,
   avatarStyle,
   background,
-  testMode,
   onAspectRatioChange,
   onAvatarStyleChange,
   onBackgroundChange,
-  onTestModeChange,
 }: VideoSettingsProps) {
   return (
     <div className="space-y-5">
@@ -62,14 +58,13 @@ export function VideoSettings({
               key={ratio.value}
               onClick={() => onAspectRatioChange(ratio.value)}
               className={cn(
-                "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2",
+                "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
                 aspectRatio === ratio.value
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               )}
             >
-              <span>{ratio.icon}</span>
-              <span>{ratio.label}</span>
+              {ratio.label}
             </button>
           ))}
         </div>
@@ -104,6 +99,24 @@ export function VideoSettings({
           Background Color
         </label>
         <div className="flex flex-wrap gap-2">
+          {/* Transparent Background */}
+          <button
+            onClick={() => onBackgroundChange({ type: "color", value: "transparent" })}
+            className={cn(
+              "w-8 h-8 rounded-lg border-2 transition-all relative",
+              background.type === "color" && background.value === "transparent"
+                ? "border-primary ring-2 ring-primary/30 scale-110"
+                : "border-transparent hover:scale-105"
+            )}
+            title="Transparent"
+          >
+            <div className="absolute inset-0 bg-checkerboard rounded-lg" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          </button>
           {presetColors.map((color) => (
             <button
               key={color}
@@ -121,7 +134,7 @@ export function VideoSettings({
           <div className="relative">
             <input
               type="color"
-              value={background.type === "color" ? background.value : "#ffffff"}
+              value={background.type === "color" && background.value !== "transparent" ? background.value : "#ffffff"}
               onChange={(e) =>
                 onBackgroundChange({ type: "color", value: e.target.value })
               }
@@ -132,7 +145,8 @@ export function VideoSettings({
                 "w-8 h-8 rounded-lg border-2 flex items-center justify-center",
                 "bg-gradient-to-br from-red-500 via-green-500 to-blue-500",
                 background.type === "color" &&
-                  !presetColors.includes(background.value)
+                  !presetColors.includes(background.value) &&
+                  background.value !== "transparent"
                   ? "border-primary ring-2 ring-primary/30"
                   : "border-transparent"
               )}
@@ -141,30 +155,6 @@ export function VideoSettings({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Test Mode Toggle */}
-      <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-        <div>
-          <p className="text-sm font-medium">Test Mode</p>
-          <p className="text-xs text-muted-foreground">
-            Generate watermarked preview (free)
-          </p>
-        </div>
-        <button
-          onClick={() => onTestModeChange(!testMode)}
-          className={cn(
-            "relative w-12 h-6 rounded-full transition-colors",
-            testMode ? "bg-primary" : "bg-secondary"
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-              testMode ? "translate-x-7" : "translate-x-1"
-            )}
-          />
-        </button>
       </div>
     </div>
   );

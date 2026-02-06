@@ -72,6 +72,32 @@ export function useAvatarGroups() {
   return { groups, isLoading, error, refetch: fetchGroups };
 }
 
+export function useUserAvatarGroups() {
+  const [groups, setGroups] = useState<AvatarGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchGroups = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchApi<AvatarGroup[]>("/api/avatar-groups?include_public=false");
+      setGroups(data || []);
+    } catch (err) {
+      setGroups([]);
+      setError(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  return { groups, isLoading, error, refetch: fetchGroups };
+}
+
 export function useAvatarsInGroup(groupId: string | null) {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [isLoading, setIsLoading] = useState(false);

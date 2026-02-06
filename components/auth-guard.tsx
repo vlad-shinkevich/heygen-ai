@@ -15,7 +15,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Проверка доступа...</p>
+          <p className="text-muted-foreground">Checking access...</p>
         </div>
       </div>
     );
@@ -45,16 +45,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
           {/* Title */}
           <div>
-            <h1 className="text-2xl font-bold">Доступ запрещён</h1>
+            <h1 className="text-2xl font-bold">Access Denied</h1>
             <p className="text-muted-foreground mt-2">
-              {error || "У вас нет доступа к этому приложению"}
+              {error || "You don't have access to this application"}
             </p>
           </div>
 
           {/* User info if available */}
           {user && (
             <div className="p-4 bg-secondary/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Ваш Telegram ID:</p>
+              <p className="text-sm text-muted-foreground">Your Telegram ID:</p>
               <p className="font-mono font-medium">{user.id}</p>
               {user.username && (
                 <p className="text-sm text-muted-foreground mt-1">
@@ -66,10 +66,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
           {/* Help text */}
           <div className="text-sm text-muted-foreground">
-            <p>Для получения доступа обратитесь к администратору.</p>
+            <p>Please contact the administrator to get access.</p>
             {user && (
               <p className="mt-2">
-                Сообщите ваш Telegram ID: <strong>{user.id}</strong>
+                Provide your Telegram ID: <strong>{user.id}</strong>
               </p>
             )}
           </div>
@@ -78,8 +78,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           {!isTelegram && (
             <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                ⚠️ Это приложение работает только через Telegram Mini App.
-                Откройте его через бота в Telegram.
+                This application works only through Telegram Mini App. Open it through the bot in Telegram.
               </p>
             </div>
           )}
@@ -88,7 +87,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           {!isTelegram && typeof window !== "undefined" && window.location.hostname === "localhost" && (
             <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
               <p className="text-xs text-blue-600 dark:text-blue-400">
-                ℹ️ Режим разработки: доступ разрешён для тестирования на localhost.
+                Development mode: access allowed for testing on localhost.
               </p>
             </div>
           )}
