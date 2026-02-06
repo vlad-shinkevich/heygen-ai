@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { Voice } from "@/lib/types/heygen";
 import { cn } from "@/lib/utils";
 
