@@ -208,7 +208,7 @@ export function AvatarSelector({
               {avatar.preview_image_url ? (
                 <Image
                   src={avatar.preview_image_url}
-                  alt={avatar.avatar_name}
+                  alt={avatar.avatar_name || avatar.name || avatar.avatar_id || "Avatar"}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
@@ -235,7 +235,7 @@ export function AvatarSelector({
               {/* Overlay with name */}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                 <p className="text-[10px] text-white truncate font-medium">
-                  {avatar.avatar_name}
+                  {avatar.avatar_name || avatar.name || avatar.avatar_id || "Avatar"}
                 </p>
               </div>
 
@@ -310,7 +310,7 @@ export function AvatarSelector({
             {selectedAvatar.preview_image_url ? (
               <Image
                 src={selectedAvatar.preview_image_url}
-                alt={selectedAvatar.avatar_name}
+                alt={selectedAvatar.avatar_name || selectedAvatar.name || selectedAvatar.avatar_id || "Avatar"}
                 fill
                 className="object-cover"
                 unoptimized
@@ -334,10 +334,10 @@ export function AvatarSelector({
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm truncate">
-              {selectedAvatar.avatar_name}
+              {selectedAvatar.avatar_name || selectedAvatar.name || selectedAvatar.avatar_id || "Avatar"}
             </p>
             <p className="text-xs text-muted-foreground capitalize">
-              {selectedAvatar.gender} • {selectedAvatar.type || "standard"}
+              {selectedAvatar.gender || "unknown"} • {selectedAvatar.type || "standard"}
             </p>
           </div>
         </div>
