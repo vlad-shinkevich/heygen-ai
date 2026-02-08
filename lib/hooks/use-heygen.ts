@@ -124,8 +124,9 @@ export function useUserAvatars() {
       // Each group represents one talking photo avatar
       const talkingPhotoAvatars: Avatar[] = groups
         .filter((group) => {
-          // Only include groups with looks
-          return group.num_looks && group.num_looks > 0;
+          // Include all groups (even with train_status: "empty" if they have num_looks > 0)
+          // But also include groups without num_looks check if they exist
+          return true; // Include all groups from the response
         })
         .map((group) => {
           const groupId = group.id || group.group_id || "";
@@ -144,6 +145,7 @@ export function useUserAvatars() {
           };
         });
       
+      console.log("Converted user avatars:", talkingPhotoAvatars);
       setAvatars(talkingPhotoAvatars);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch user avatars");

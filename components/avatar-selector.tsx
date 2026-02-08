@@ -43,15 +43,11 @@ export function AvatarSelector({
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(initialPage || 1);
   
-  // Determine which avatars to show based on tab
-  // For user tab: if a group is selected, show that group's avatars, otherwise show empty
-  // For regular tab: show regular avatars
-  const displayAvatars = selectedTab === "user" 
-    ? (selectedGroupId && userGroupAvatars.length > 0 ? userGroupAvatars : [])
-    : avatars;
-  const displayGroups = selectedTab === "user" ? userGroups : groups;
+  // Use avatars prop directly - it's already filtered by tab in parent component
+  const displayAvatars = avatars;
+  const displayGroups = selectedTab === "regular" ? groups : [];
   const isDisplayLoading = selectedTab === "user" 
-    ? (isLoadingUserGroups || (selectedGroupId && isLoadingUserGroups)) 
+    ? isLoadingUserGroups
     : isLoading;
   
   // Filter avatars by search query
