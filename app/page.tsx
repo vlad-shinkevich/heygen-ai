@@ -55,8 +55,8 @@ export default function Home() {
       // Only load once
       if (settingsLoadedRef.current) return;
       
-      // Wait for user, avatars, and voices to be loaded
-      if (!user?.id || avatarsLoading || voicesLoading || avatars.length === 0 || voices.length === 0) {
+      // Wait for user, avatars, voices, and user avatars to be loaded
+      if (!user?.id || avatarsLoading || voicesLoading || userAvatarsLoading || avatars.length === 0 || voices.length === 0) {
         return;
       }
 
@@ -72,32 +72,40 @@ export default function Home() {
 
           // Find and set avatar
           if (settings.avatarId) {
-            // Search in all avatars first
-            let foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
+            let foundAvatar: Avatar | undefined;
             
-            // If found in all avatars, ensure group is reset to null (show all)
-            if (foundAvatar) {
-              if (state.selectedGroupId !== null) {
-                dispatch(videoActions.setGroup(null));
-              }
-              dispatch(videoActions.setAvatar(foundAvatar));
-            } else {
-              // If not found in all avatars, search in group avatars
-              // This means avatar is in a group, so group should already be selected
-              if (groupAvatars.length > 0) {
-                foundAvatar = groupAvatars.find((a) => a.avatar_id === settings.avatarId);
-                if (foundAvatar) {
-                  dispatch(videoActions.setAvatar(foundAvatar));
+            // Check avatar type to know where to search
+            if (settings.avatarType === "talking_photo") {
+              // Search in user avatars (talking photos)
+              foundAvatar = userAvatars.find((a) => a.avatar_id === settings.avatarId);
+              if (foundAvatar) {
+                // Switch to user tab if needed
+                if (selectedTab !== "user") {
+                  setSelectedTab("user");
                 }
+                dispatch(videoActions.setGroup(null));
+                dispatch(videoActions.setAvatar(foundAvatar));
+              }
+            } else {
+              // Search in regular avatars
+              foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
+              
+              // If found in all avatars, ensure group is reset to null (show all)
+              if (foundAvatar) {
+                if (state.selectedGroupId !== null) {
+                  dispatch(videoActions.setGroup(null));
+                }
+                if (selectedTab !== "regular") {
+                  setSelectedTab("regular");
+                }
+                dispatch(videoActions.setAvatar(foundAvatar));
               } else {
-                // Avatar not found in current group, try to find which group it belongs to
-                // For now, just search in all avatars again (maybe it was added to all list)
-                foundAvatar = avatars.find((a) => a.avatar_id === settings.avatarId);
-                if (foundAvatar) {
-                  if (state.selectedGroupId !== null) {
-                    dispatch(videoActions.setGroup(null));
+                // If not found in all avatars, search in group avatars
+                if (groupAvatars.length > 0) {
+                  foundAvatar = groupAvatars.find((a) => a.avatar_id === settings.avatarId);
+                  if (foundAvatar) {
+                    dispatch(videoActions.setAvatar(foundAvatar));
                   }
-                  dispatch(videoActions.setAvatar(foundAvatar));
                 }
               }
             }
@@ -132,7 +140,7 @@ export default function Home() {
     };
 
     loadSavedSettings();
-  }, [user?.id, avatars, voices, avatarsLoading, voicesLoading, groupAvatars, dispatch]);
+  }, [user?.id, avatars, userAvatars, voices, avatarsLoading, voicesLoading, userAvatarsLoading, groupAvatars, selectedTab, dispatch]);
 
   // Handle avatar selection
   const handleAvatarSelect = (avatar: Avatar) => {
@@ -196,8 +204,9 @@ export default function Home() {
       const settingsData = {
         telegramId: user.id,
         avatarId: state.selectedAvatar.avatar_id,
-        avatarName: state.selectedAvatar.avatar_name,
+        avatarName: state.selectedAvatar.avatar_name || state.selectedAvatar.talking_photo_name,
         avatarImageUrl: state.selectedAvatar.preview_image_url,
+        avatarType: state.selectedAvatar.avatar_type || "avatar",
         voiceId: state.selectedVoice?.voice_id || state.selectedAvatar.default_voice_id || null,
         aspectRatio: state.aspectRatio,
         avatarStyle: state.avatarStyle,

@@ -6,6 +6,7 @@ interface SaveSettingsRequest {
   avatarId: string;
   avatarName?: string;
   avatarImageUrl?: string;
+  avatarType?: "avatar" | "talking_photo";
   voiceId: string;
   aspectRatio?: "16:9" | "9:16" | "1:1";
   avatarStyle?: "normal" | "circle" | "closeUp";
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       avatar_id: body.avatarId,
       avatar_name: body.avatarName || null,
       avatar_image_url: body.avatarImageUrl || null,
+      avatar_type: body.avatarType || "avatar", // Default to 'avatar' if not provided
       voice_id: body.voiceId,
     };
 
@@ -90,6 +92,7 @@ export async function POST(request: Request) {
       avatar_id: dbData.avatar_id,
       avatar_name: dbData.avatar_name,
       avatar_image_url: dbData.avatar_image_url,
+      avatar_type: dbData.avatar_type,
       voice_id: dbData.voice_id,
       background: dbData.background,
       updated_at: new Date().toISOString(),

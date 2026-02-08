@@ -1,4 +1,4 @@
-// ============ Base Types ============
+"type": "talking_photo" "type": "talking_photo"// ============ Base Types ============
 
 export type VideoStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -13,12 +13,15 @@ export interface VideoBackground {
 
 export interface Avatar {
   avatar_id: string;
+  talking_photo_id?: string; // For user-created talking photos
   name?: string;
   avatar_name?: string;
+  talking_photo_name?: string; // For user-created talking photos
   preview_image_url?: string;
   preview_video_url?: string;
   avatar_style?: "normal" | "circle" | "closeUp";
   default_voice_id?: string;
+  avatar_type?: "avatar" | "talking_photo"; // Type of avatar
   [key: string]: any; // Allow additional properties from API
 }
 

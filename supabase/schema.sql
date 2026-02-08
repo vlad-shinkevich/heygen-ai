@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     avatar_id TEXT NOT NULL,
     avatar_name TEXT,
     avatar_image_url TEXT,
+    avatar_type TEXT DEFAULT 'avatar', -- 'avatar' or 'talking_photo'
     voice_id TEXT NOT NULL,
     aspect_ratio TEXT DEFAULT '16:9',
     avatar_style TEXT DEFAULT 'normal',
@@ -280,4 +281,10 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 -- ALTER TABLE user_settings 
 -- ADD COLUMN IF NOT EXISTS current_menu TEXT;
+
+-- Migration: Add avatar_type to user_settings
+-- Run this if the column doesn't exist yet
+-- ============================================
+-- ALTER TABLE user_settings 
+-- ADD COLUMN IF NOT EXISTS avatar_type TEXT DEFAULT 'avatar';
 

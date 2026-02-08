@@ -43,10 +43,12 @@ export async function GET(request: Request) {
         avatarId: data.avatar_id,
         avatarName: data.avatar_name,
         avatarImageUrl: data.avatar_image_url,
+        avatarType: data.avatar_type || "avatar",
         voiceId: data.voice_id,
         aspectRatio: data.aspect_ratio,
         avatarStyle: data.avatar_style,
         background: data.background,
+        currentMenu: data.current_menu,
       } : null,
     });
   } catch (error) {

@@ -99,8 +99,8 @@ export function useUserAvatarGroups() {
 }
 
 /**
- * Fetch all avatars from all user-created avatar groups
- * This combines avatars from all groups into a single list
+ * Fetch all user-created talking photos (avatars)
+ * Each group in avatar_group_list is actually a talking photo avatar
  */
 export function useUserAvatars() {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
@@ -112,7 +112,7 @@ export function useUserAvatars() {
       setIsLoading(true);
       setError(null);
       
-      // First, get all user groups
+      // Get all user groups - each group is a talking photo avatar
       const groups = await fetchApi<AvatarGroup[]>("/api/avatar-groups?include_public=false");
       
       if (!groups || groups.length === 0) {
@@ -120,33 +120,31 @@ export function useUserAvatars() {
         return;
       }
 
-      // Fetch avatars from all groups in parallel
-      // Only skip groups with num_looks === 0 (train_status can be "empty" but still have looks)
-      const avatarPromises = groups.map(async (group) => {
-        const groupId = group.id || group.group_id;
-        if (!groupId) return [];
-        
-        // Skip groups with no looks
-        if (group.num_looks === 0 || !group.num_looks) {
-          return [];
-        }
-        
-        try {
-          return await fetchApi<Avatar[]>(`/api/avatar-groups/${groupId}/avatars`);
-        } catch (err) {
-          // Silently skip groups that return 404 or other errors
-          // This is expected for empty or invalid groups
-          console.warn(`Skipping group ${groupId} (${group.name}):`, err instanceof Error ? err.message : "Unknown error");
-          return [];
-        }
-      });
-
-      const avatarArrays = await Promise.all(avatarPromises);
+      // Convert groups to avatars format
+      // Each group represents one talking photo avatar
+      const talkingPhotoAvatars: Avatar[] = groups
+        .filter((group) => {
+          // Only include groups with looks
+          return group.num_looks && group.num_looks > 0;
+        })
+        .map((group) => {
+          const groupId = group.id || group.group_id || "";
+          return {
+            avatar_id: groupId, // Use group id as avatar_id
+            talking_photo_id: groupId, // Also store as talking_photo_id
+            avatar_name: group.name || "Unnamed",
+            talking_photo_name: group.name || "Unnamed",
+            preview_image_url: group.preview_image || undefined,
+            default_voice_id: group.default_voice_id || undefined,
+            avatar_type: "talking_photo" as const,
+            // Store original group data for reference
+            group_type: group.group_type,
+            train_status: group.train_status,
+            num_looks: group.num_looks,
+          };
+        });
       
-      // Flatten and combine all avatars
-      const allAvatars = avatarArrays.flat();
-      
-      setAvatars(allAvatars);
+      setAvatars(talkingPhotoAvatars);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch user avatars");
       setAvatars([]);
