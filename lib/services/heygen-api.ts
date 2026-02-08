@@ -209,13 +209,22 @@ class HeyGenApiService {
    * Get avatars in a specific group
    */
   async getAvatarsInGroup(groupId: string): Promise<Avatar[]> {
-    const response = await this.request<AvatarGroupAvatarsResponse>(
-      `/v2/avatar_groups/${groupId}/avatars`
-    );
-    if (response.error) {
-      throw new Error(response.error);
+    try {
+      const response = await this.request<AvatarGroupAvatarsResponse>(
+        `/v2/avatar_groups/${groupId}/avatars`
+      );
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data.avatars;
+    } catch (error: any) {
+      // Handle 404 for empty or non-existent groups
+      if (error?.status === 404 || error?.message?.includes('404')) {
+        console.warn(`Group ${groupId} not found or empty`);
+        return [];
+      }
+      throw error;
     }
-    return response.data.avatars;
   }
 
   // ============ Voice Methods ============

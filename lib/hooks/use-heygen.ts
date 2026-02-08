@@ -121,14 +121,22 @@ export function useUserAvatars() {
       }
 
       // Fetch avatars from all groups in parallel
+      // Skip groups with empty train_status or num_looks === 0
       const avatarPromises = groups.map(async (group) => {
         const groupId = group.id || group.group_id;
         if (!groupId) return [];
         
+        // Skip empty groups
+        if (group.train_status === "empty" || group.num_looks === 0) {
+          return [];
+        }
+        
         try {
           return await fetchApi<Avatar[]>(`/api/avatar-groups/${groupId}/avatars`);
         } catch (err) {
-          console.error(`Error fetching avatars from group ${groupId}:`, err);
+          // Silently skip groups that return 404 or other errors
+          // This is expected for empty or invalid groups
+          console.warn(`Skipping group ${groupId} (${group.name}):`, err instanceof Error ? err.message : "Unknown error");
           return [];
         }
       });

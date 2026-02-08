@@ -13,7 +13,16 @@ export async function GET(
       success: true,
       data: avatars,
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Handle 404 errors gracefully - group might be empty or not exist
+    if (error?.status === 404) {
+      console.warn(`Group ${groupId} not found or empty, returning empty array`);
+      return NextResponse.json({
+        success: true,
+        data: [],
+      });
+    }
+    
     console.error("Error fetching avatars in group:", error);
     return NextResponse.json(
       {
