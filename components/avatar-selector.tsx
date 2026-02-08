@@ -233,6 +233,35 @@ export function AvatarSelector({
                 <p className="text-[10px] text-white truncate font-medium">
                   {avatar.avatar_name || avatar.name || avatar.avatar_id || "Avatar"}
                 </p>
+                {/* Train status badge for My Avatars */}
+                {selectedTab === "user" && avatar.train_status && (
+                  <div className="mt-1">
+                    <span
+                      className={cn(
+                        "inline-block px-1.5 py-0.5 rounded text-[9px] font-medium",
+                        avatar.train_status === "completed"
+                          ? "bg-green-500/90 text-white"
+                          : avatar.train_status === "training"
+                          ? "bg-yellow-500/90 text-white"
+                          : avatar.train_status === "pending"
+                          ? "bg-blue-500/90 text-white"
+                          : avatar.train_status === "empty"
+                          ? "bg-gray-500/90 text-white"
+                          : "bg-orange-500/90 text-white"
+                      )}
+                    >
+                      {avatar.train_status === "completed"
+                        ? "Ready"
+                        : avatar.train_status === "training"
+                        ? "Training"
+                        : avatar.train_status === "pending"
+                        ? "Pending"
+                        : avatar.train_status === "empty"
+                        ? "Empty"
+                        : avatar.train_status}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Selection indicator */}
@@ -332,9 +361,38 @@ export function AvatarSelector({
             <p className="font-medium text-sm truncate">
               {selectedAvatar.avatar_name || selectedAvatar.name || selectedAvatar.avatar_id || "Avatar"}
             </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {selectedAvatar.gender || "unknown"} • {selectedAvatar.type || "standard"}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-muted-foreground capitalize">
+                {selectedAvatar.gender || "unknown"} • {selectedAvatar.type || "standard"}
+              </p>
+              {/* Train status for My Avatars */}
+              {selectedTab === "user" && selectedAvatar.train_status && (
+                <span
+                  className={cn(
+                    "inline-block px-1.5 py-0.5 rounded text-[10px] font-medium",
+                    selectedAvatar.train_status === "completed"
+                      ? "bg-green-500/90 text-white"
+                      : selectedAvatar.train_status === "training"
+                      ? "bg-yellow-500/90 text-white"
+                      : selectedAvatar.train_status === "pending"
+                      ? "bg-blue-500/90 text-white"
+                      : selectedAvatar.train_status === "empty"
+                      ? "bg-gray-500/90 text-white"
+                      : "bg-orange-500/90 text-white"
+                  )}
+                >
+                  {selectedAvatar.train_status === "completed"
+                    ? "Ready"
+                    : selectedAvatar.train_status === "training"
+                    ? "Training"
+                    : selectedAvatar.train_status === "pending"
+                    ? "Pending"
+                    : selectedAvatar.train_status === "empty"
+                    ? "Empty"
+                    : selectedAvatar.train_status}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
