@@ -1,4 +1,4 @@
-"type": "talking_photo" "type": "talking_photo"// ============ Base Types ============
+// ============ Base Types ============
 
 export type VideoStatus = "pending" | "processing" | "completed" | "failed";
 
