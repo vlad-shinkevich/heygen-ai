@@ -5,8 +5,9 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ groupId: string }> }
 ) {
+  const { groupId } = await params;
+  
   try {
-    const { groupId } = await params;
     const avatars = await heygenApi.getAvatarsInGroup(groupId);
 
     return NextResponse.json({
