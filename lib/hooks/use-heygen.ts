@@ -121,13 +121,13 @@ export function useUserAvatars() {
       }
 
       // Fetch avatars from all groups in parallel
-      // Skip groups with empty train_status or num_looks === 0
+      // Only skip groups with num_looks === 0 (train_status can be "empty" but still have looks)
       const avatarPromises = groups.map(async (group) => {
         const groupId = group.id || group.group_id;
         if (!groupId) return [];
         
-        // Skip empty groups
-        if (group.train_status === "empty" || group.num_looks === 0) {
+        // Skip groups with no looks
+        if (group.num_looks === 0 || !group.num_looks) {
           return [];
         }
         
