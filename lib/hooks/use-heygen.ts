@@ -98,6 +98,62 @@ export function useUserAvatarGroups() {
   return { groups, isLoading, error, refetch: fetchGroups };
 }
 
+/**
+ * Fetch all avatars from all user-created avatar groups
+ * This combines avatars from all groups into a single list
+ */
+export function useUserAvatars() {
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUserAvatars = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // First, get all user groups
+      const groups = await fetchApi<AvatarGroup[]>("/api/avatar-groups?include_public=false");
+      
+      if (!groups || groups.length === 0) {
+        setAvatars([]);
+        return;
+      }
+
+      // Fetch avatars from all groups in parallel
+      const avatarPromises = groups.map(async (group) => {
+        const groupId = group.id || group.group_id;
+        if (!groupId) return [];
+        
+        try {
+          return await fetchApi<Avatar[]>(`/api/avatar-groups/${groupId}/avatars`);
+        } catch (err) {
+          console.error(`Error fetching avatars from group ${groupId}:`, err);
+          return [];
+        }
+      });
+
+      const avatarArrays = await Promise.all(avatarPromises);
+      
+      // Flatten and combine all avatars
+      const allAvatars = avatarArrays.flat();
+      
+      setAvatars(allAvatars);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch user avatars");
+      setAvatars([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserAvatars();
+  }, [fetchUserAvatars]);
+
+  return { avatars, isLoading, error, refetch: fetchUserAvatars };
+}
+
 export function useAvatarsInGroup(groupId: string | null) {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [isLoading, setIsLoading] = useState(false);

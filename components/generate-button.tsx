@@ -24,17 +24,14 @@ export function GenerateButton({
     const webApp = getTelegramWebApp();
     if (!webApp) return;
 
-    if (disabled) {
-      hideMainButton();
-    } else {
-      showMainButton("Save Settings", onClick);
-      setMainButtonLoading(isLoading);
+    // Always show the button, but disable it when needed
+    showMainButton("Save Settings", onClick);
+    setMainButtonLoading(isLoading);
 
-      if (isLoading) {
-        webApp.MainButton.disable();
-      } else {
-        webApp.MainButton.enable();
-      }
+    if (disabled || isLoading) {
+      webApp.MainButton.disable();
+    } else {
+      webApp.MainButton.enable();
     }
 
     return () => {

@@ -134,8 +134,8 @@ export function AvatarSelector({
         </button>
       </div>
 
-      {/* Group Filter */}
-      {displayGroups.length > 0 && (
+      {/* Group Filter - only show for regular tab */}
+      {selectedTab === "regular" && displayGroups.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => onGroupSelect(null)}

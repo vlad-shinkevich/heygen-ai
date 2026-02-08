@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import {
   useAvatars,
   useAvatarGroups,
-  useUserAvatarGroups,
+  useUserAvatars,
   useAvatarsInGroup,
   useVoices,
   useQuota,
@@ -31,7 +31,7 @@ export default function Home() {
   // API Hooks
   const { avatars, isLoading: avatarsLoading, error: avatarsError } = useAvatars();
   const { groups, isLoading: groupsLoading } = useAvatarGroups();
-  const { groups: userGroups, isLoading: userGroupsLoading } = useUserAvatarGroups();
+  const { avatars: userAvatars, isLoading: userAvatarsLoading } = useUserAvatars();
   const { avatars: groupAvatars, isLoading: groupAvatarsLoading } = useAvatarsInGroup(
     state.selectedGroupId
   );
@@ -41,19 +41,13 @@ export default function Home() {
   const [selectedTab, setSelectedTab] = useState<"regular" | "user">("regular");
   const settingsLoadedRef = useRef(false);
 
-  // Get user group avatars if user tab is selected
-  const { avatars: userGroupAvatars, isLoading: userGroupAvatarsLoading } = useAvatarsInGroup(
-    selectedTab === "user" && state.selectedGroupId ? state.selectedGroupId : null
-  );
-
   // Combine all avatars (either from selected group or all avatars)
   const displayAvatars = state.selectedGroupId ? groupAvatars : avatars;
   const isLoadingAvatars = state.selectedGroupId ? groupAvatarsLoading : avatarsLoading;
   
-  // User avatars display - if no group selected, show empty (will be populated by fetching all groups)
-  // For now, we only show avatars when a specific group is selected
-  const displayUserAvatars = state.selectedGroupId && selectedTab === "user" ? userGroupAvatars : [];
-  const isLoadingUserAvatars = state.selectedGroupId && selectedTab === "user" ? userGroupAvatarsLoading : false;
+  // User avatars - show all user-created avatars from all groups
+  const displayUserAvatars = selectedTab === "user" ? userAvatars : [];
+  const isLoadingUserAvatars = selectedTab === "user" ? userAvatarsLoading : false;
 
   // Load saved settings on mount
   useEffect(() => {
@@ -163,8 +157,11 @@ export default function Home() {
   const handleTabChange = (tab: "regular" | "user") => {
     haptic.selection();
     setSelectedTab(tab);
-    dispatch(videoActions.setGroup(null)); // Reset group when switching tabs
-    dispatch(videoActions.setAvatar(null)); // Reset avatar when switching tabs
+    // Reset group and avatar when switching tabs
+    if (tab === "user") {
+      dispatch(videoActions.setGroup(null)); // No group selection in user tab
+    }
+    // Don't reset avatar - keep it if it exists in the new tab
   };
 
 
@@ -233,15 +230,19 @@ export default function Home() {
     }
   }, [isGenerating, state.selectedAvatar, state.selectedVoice, state.aspectRatio, state.avatarStyle, state.background, user?.id, haptic, dispatch]);
 
-  // Check if settings can be saved (voice can be null if using default)
-  const canGenerate = state.selectedAvatar && (state.selectedVoice !== null || state.selectedAvatar.default_voice_id);
+  // Check if settings can be saved
+  // Avatar is required, voice can be null only if avatar has default_voice_id
+  const canGenerate = !!state.selectedAvatar && (
+    state.selectedVoice !== null || 
+    !!state.selectedAvatar.default_voice_id
+  );
 
   // Show loading until everything is ready and loaded
   const isEverythingLoaded = isReady && 
     !avatarsLoading && 
     !voicesLoading && 
     !groupsLoading && 
-    !userGroupsLoading &&
+    !(selectedTab === "user" && userAvatarsLoading) &&
     avatars.length > 0 && 
     voices.length > 0;
 
@@ -256,7 +257,7 @@ export default function Home() {
             {avatarsLoading && <p className="text-xs text-muted-foreground">Loading avatars...</p>}
             {voicesLoading && <p className="text-xs text-muted-foreground">Loading voices...</p>}
             {groupsLoading && <p className="text-xs text-muted-foreground">Loading groups...</p>}
-            {userGroupsLoading && <p className="text-xs text-muted-foreground">Loading user avatars...</p>}
+            {selectedTab === "user" && userAvatarsLoading && <p className="text-xs text-muted-foreground">Loading user avatars...</p>}
           </div>
         </div>
       </div>
@@ -280,18 +281,17 @@ export default function Home() {
             1. Select Avatar
           </h2>
           <AvatarSelector
-            avatars={displayAvatars}
-            groups={groups}
-            userGroups={userGroups}
-            userGroupAvatars={displayUserAvatars}
+            avatars={selectedTab === "regular" ? displayAvatars : displayUserAvatars}
+            groups={selectedTab === "regular" ? groups : []}
+            userGroupAvatars={[]}
             selectedAvatar={state.selectedAvatar}
-            selectedGroupId={state.selectedGroupId}
+            selectedGroupId={selectedTab === "regular" ? state.selectedGroupId : null}
             selectedTab={selectedTab}
             onAvatarSelect={handleAvatarSelect}
             onGroupSelect={handleGroupSelect}
             onTabChange={handleTabChange}
-            isLoading={isLoadingAvatars || groupsLoading}
-            isLoadingUserGroups={userGroupsLoading || isLoadingUserAvatars}
+            isLoading={selectedTab === "regular" ? (isLoadingAvatars || groupsLoading) : isLoadingUserAvatars}
+            isLoadingUserGroups={false}
             error={avatarsError}
           />
         </section>
